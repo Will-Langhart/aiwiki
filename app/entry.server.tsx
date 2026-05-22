@@ -14,6 +14,7 @@ export default function handleRequest(
 ) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
+    let statusCode = responseStatusCode;
     const { pipe, abort } = renderToPipeableStream(
       <ServerRouter context={routerContext} url={request.url} />,
       {
@@ -27,7 +28,7 @@ export default function handleRequest(
           resolve(
             new Response(stream, {
               headers: responseHeaders,
-              status: responseStatusCode,
+              status: statusCode,
             }),
           );
 
@@ -37,7 +38,7 @@ export default function handleRequest(
           reject(error);
         },
         onError(error: unknown) {
-          responseStatusCode = 500;
+          statusCode = 500;
           if (shellRendered) {
             console.error(error);
           }

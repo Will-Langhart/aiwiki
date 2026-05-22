@@ -133,7 +133,7 @@ export default function ToolLayout() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["tool", slug, user?.id],
-    queryFn: () => fetchToolData(slug!, user?.id),
+    queryFn: () => fetchToolData(slug ?? "", user?.id),
     enabled: !!slug,
     staleTime: 60 * 1000,
   });

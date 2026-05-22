@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/tools._index";
 import { supabase } from "@/lib/supabase.client";
 import { DirectoryGrid } from "@/components/directory/DirectoryGrid";
@@ -52,7 +52,7 @@ async function fetchTools(params: {
   api: boolean | null;
   oss: boolean | null;
 }): Promise<ToolResult[]> {
-  const { data } = await supabase.rpc("search_tools", {
+  const { data, error } = await supabase.rpc("search_tools", {
     query: params.q || undefined,
     cat_slugs: params.cats.length > 0 ? params.cats : undefined,
     pricing_tiers: params.pricing.length > 0 ? params.pricing : undefined,
@@ -62,6 +62,7 @@ async function fetchTools(params: {
     page_size: 60,
     page_offset: 0,
   });
+  if (error) throw new Error(error.message);
   return (data as ToolResult[]) ?? [];
 }
 
@@ -77,24 +78,19 @@ export default function ToolsIndex() {
   const oss = searchParams.get("oss") === "true" ? true : null;
   const q = searchParams.get("q") ?? "";
 
-  // Update q param when debounced input changes
-  const updateQ = useCallback(
-    (val: string) => {
-      const next = new URLSearchParams(searchParams);
-      if (val) {
-        next.set("q", val);
-      } else {
-        next.delete("q");
-      }
+  // Sync debounced input → URL (must be in useEffect, not during render)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally omit searchParams/setSearchParams — adding them causes infinite re-render
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (debouncedInput) {
+      next.set("q", debouncedInput);
+    } else {
+      next.delete("q");
+    }
+    if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
-    },
-    [searchParams, setSearchParams]
-  );
-
-  // Sync debounced input → URL
-  if (debouncedInput !== q) {
-    updateQ(debouncedInput);
-  }
+    }
+  }, [debouncedInput]); // only fire when debounced value changes
 
   const { data: categories = [], isLoading: catsLoading } = useQuery({
     queryKey: ["categories"],

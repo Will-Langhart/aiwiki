@@ -7,9 +7,20 @@ import {
   isRouteErrorResponse,
 } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
 import type { Route } from "./+types/root";
 import "./styles/globals.css";
+
+// Module-level singleton so the client is stable across HMR and SSR→hydration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      retry: 1,
+      // Don't run on the server (ssr:false mode — all data is client-side)
+      enabled: typeof window !== "undefined",
+    },
+  },
+});
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -43,6 +54,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* eslint-disable-next-line */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: intentional flash-free theme hydration — must run before React mounts */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Meta />
         <Links />
@@ -57,18 +69,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-            retry: 1,
-          },
-        },
-      })
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

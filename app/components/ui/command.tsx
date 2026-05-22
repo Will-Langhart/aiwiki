@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import type * as React from "react";
 import { Search } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Dialog, DialogContent } from "@/components/ui/dialog";

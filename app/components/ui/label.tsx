@@ -1,9 +1,10 @@
-import * as React from "react"
+import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
 function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: Label is a generic primitive; callers supply htmlFor or nest the control
     <label
       data-slot="label"
       className={cn(

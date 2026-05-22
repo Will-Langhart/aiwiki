@@ -1,8 +1,5 @@
 import { useSearchParams } from "react-router";
 import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +48,7 @@ function CheckboxFilter({
   const [searchParams, setSearchParams] = useSearchParams();
   const currentValues = searchParams.getAll(param);
   const checked = currentValues.includes(value);
+  const id = `${param}-${value}`;
 
   const toggle = () => {
     const next = new URLSearchParams(searchParams);
@@ -62,23 +60,33 @@ function CheckboxFilter({
     } else {
       next.append(param, value);
     }
-    next.delete("page"); // reset pagination
+    next.delete("page");
     setSearchParams(next, { replace: true });
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Checkbox id={`${param}-${value}`} checked={checked} onCheckedChange={toggle} />
-      <Label htmlFor={`${param}-${value}`} className="text-sm text-text-muted cursor-pointer">
+    <label
+      htmlFor={id}
+      className="flex items-center gap-2 cursor-pointer group"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={toggle}
+        className="w-4 h-4 rounded border border-border bg-surface text-accent accent-accent cursor-pointer"
+      />
+      <span className="text-sm text-text-muted group-hover:text-text transition-colors">
         {label}
-      </Label>
-    </div>
+      </span>
+    </label>
   );
 }
 
 function BooleanFilter({ param, label }: { param: string; label: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const checked = searchParams.get(param) === "true";
+  const id = `bool-${param}`;
 
   const toggle = () => {
     const next = new URLSearchParams(searchParams);
@@ -92,12 +100,18 @@ function BooleanFilter({ param, label }: { param: string; label: string }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Checkbox id={`bool-${param}`} checked={checked} onCheckedChange={toggle} />
-      <Label htmlFor={`bool-${param}`} className="text-sm text-text-muted cursor-pointer">
+    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer group">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={toggle}
+        className="w-4 h-4 rounded border border-border bg-surface text-accent accent-accent cursor-pointer"
+      />
+      <span className="text-sm text-text-muted group-hover:text-text transition-colors">
         {label}
-      </Label>
-    </div>
+      </span>
+    </label>
   );
 }
 
