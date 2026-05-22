@@ -1,0 +1,91 @@
+/* ─── Tailwind v4 ─────────────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* shadcn animation helpers + component layer tokens */
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Our design tokens (--bg, --surface, --accent, etc.) */
+@import "./tokens.css";
+
+/* ─── Class-based dark mode ───────────────────────────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Typography plugin ───────────────────────────────────────────────────── */
+@plugin "@tailwindcss/typography";
+
+/* ─── Expose our design tokens as Tailwind color/font utilities ────────────
+   In Tailwind v4, utilities like bg-bg / text-text-muted / border-border
+   are generated from --color-* properties defined in @theme inline.         */
+@theme inline {
+  /* Our palette → Tailwind color utilities */
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-surface-2:    var(--surface-2);
+  --color-border:       var(--border);
+  --color-text:         var(--text);
+  --color-text-muted:   var(--text-muted);
+  --color-text-subtle:  var(--text-subtle);
+  --color-accent:       var(--accent);
+  --color-accent-fg:    var(--accent-fg);
+  --color-success:      var(--success);
+  --color-warning:      var(--warning);
+  --color-danger:       var(--danger);
+
+  /* shadcn component tokens → mapped to our palette via CSS variables below */
+  --color-background:           var(--bg);
+  --color-foreground:           var(--text);
+  --color-card:                 var(--surface);
+  --color-card-foreground:      var(--text);
+  --color-popover:              var(--surface);
+  --color-popover-foreground:   var(--text);
+  --color-primary:              var(--accent);
+  --color-primary-foreground:   var(--accent-fg);
+  --color-secondary:            var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted:                var(--surface-2);
+  --color-muted-foreground:     var(--text-muted);
+  --color-destructive:          var(--danger);
+  --color-input:                var(--border);
+  --color-ring:                 var(--accent);
+
+  /* Fonts */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+
+  /* Radius (used by shadcn components) */
+  --radius: 0.5rem;
+}
+
+/* ─── Base layer overrides ────────────────────────────────────────────────── */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-lh);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: var(--surface); }
+  ::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 9999px; }
+}

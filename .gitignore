@@ -1,0 +1,25 @@
+node_modules/
+build/
+.react-router/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Supabase
+.branches
+.temp
+supabase/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Testing
+playwright-report/
+test-results/

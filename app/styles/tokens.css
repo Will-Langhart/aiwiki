@@ -1,0 +1,42 @@
+:root {
+  /* Light theme */
+  --bg:           #ffffff;
+  --surface:      #fafafa;
+  --surface-2:    #f4f4f5;   /* zinc-100 */
+  --border:       #e4e4e7;   /* zinc-200 */
+  --text:         #18181b;   /* zinc-900 */
+  --text-muted:   #71717a;   /* zinc-500 */
+  --text-subtle:  #a1a1aa;   /* zinc-400 */
+  --accent:       #3b82f6;   /* blue-500 */
+  --accent-fg:    #ffffff;
+  --success:      #10b981;
+  --warning:      #f59e0b;
+  --danger:       #ef4444;
+
+  /* Spacing — comfortable default */
+  --space-section: 4rem;
+  --space-element: 1.5rem;
+  --text-body:     1rem;
+  --text-lh:       1.7;
+  --content-width: 72ch;
+}
+
+.dark {
+  --bg:           #0a0a0a;   /* zinc-950 */
+  --surface:      #18181b;   /* zinc-900 */
+  --surface-2:    #27272a;   /* zinc-800 */
+  --border:       #27272a;
+  --text:         #fafafa;   /* zinc-50 */
+  --text-muted:   #a1a1aa;   /* zinc-400 */
+  --text-subtle:  #71717a;   /* zinc-500 */
+  --accent:       #60a5fa;   /* blue-400 — lighter for dark contrast */
+  --accent-fg:    #0a0a0a;
+}
+
+[data-density="dense"] {
+  --space-section: 2rem;
+  --space-element: 0.75rem;
+  --text-body:     0.875rem;
+  --text-lh:       1.5;
+  --content-width: 100%;
+}

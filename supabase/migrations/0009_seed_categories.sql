@@ -1,0 +1,15 @@
+insert into public.categories (slug, name, icon, sort_order) values
+  ('chat-assistants',    'Chat assistants',      'message-square',  10),
+  ('coding',             'Coding & development', 'code',            20),
+  ('image-generation',   'Image generation',     'image',           30),
+  ('video',              'Video generation',     'video',           40),
+  ('audio-music',        'Audio & music',        'music',           50),
+  ('search-research',    'Search & research',    'search',          60),
+  ('writing',            'Writing & editing',    'pen-tool',        70),
+  ('presentations-docs', 'Presentations & docs', 'presentation',    80),
+  ('design',             'Design',               'palette',         90),
+  ('data-analytics',     'Data & analytics',     'bar-chart',      100),
+  ('automation',         'Automation & agents',  'workflow',       110),
+  ('infrastructure',     'AI infrastructure',    'server',         120),
+  ('voice',              'Voice & speech',       'mic',            130),
+  ('marketing-sales',    'Marketing & sales',    'megaphone',      140);
