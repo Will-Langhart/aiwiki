@@ -1,0 +1,71 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aiwiki",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5174
+    },
+    {
+      "name": "claude-agentic-os-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/claude-agentic-os/frontend", "run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "claude-agentic-os-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/lang/claude-agentic-os/backend && source venv/bin/activate && python app.py"],
+      "port": 5001
+    },
+    {
+      "name": "clawd-llcai",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/clawd/llcai/frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "copticfaith",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/copticfaith", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "holotrout-store",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/holotrout.store", "run", "dev"],
+      "port": 8080
+    },
+    {
+      "name": "kanban",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/kanban/frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "langllm",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/langllm/frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "servcom",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/servcom/frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "shieldai",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/shieldai/shieldai", "run", "dev:web"],
+      "port": 3001
+    },
+    {
+      "name": "southern-charlotte-landscaping",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/lang/southerncharlottelandscaping", "run", "dev"],
+      "port": 8080
+    }
+  ]
+}
