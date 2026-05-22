@@ -1,11 +1,12 @@
 import { Link, Outlet, useNavigate } from "react-router";
 import { Moon, Sun, Search, Menu, X, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { DensityProvider } from "@/lib/density";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
+import { SearchCommandPalette } from "@/components/search/SearchCommandPalette";
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -65,6 +66,7 @@ function UserMenu() {
 
       {open && (
         <>
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: overlay backdrop */}
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-10 z-20 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 text-sm">
             <div className="px-3 py-2 border-b border-border">
@@ -127,101 +129,129 @@ function UserMenu() {
 
 function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Cmd+K / Ctrl+K global shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur border-b border-border">
-      <div className="container flex items-center justify-between h-14 gap-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 font-bold text-text shrink-0">
-          <Sparkles size={18} className="text-accent" />
-          <span>AI Wiki</span>
-        </Link>
+    <>
+      <SearchCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur border-b border-border">
+        <div className="container flex items-center justify-between h-14 gap-4">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 font-bold text-text shrink-0">
+            <Sparkles size={18} className="text-accent" />
+            <span>AI Wiki</span>
+          </Link>
 
-        {/* Desktop nav links */}
-        <nav className="hidden md:flex items-center gap-1 text-sm">
-          <Link
-            to="/tools"
-            className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-          >
-            Browse
-          </Link>
-          <Link
-            to="/compare"
-            className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-          >
-            Compare
-          </Link>
-          <Link
-            to="/chat"
-            className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-          >
-            Ask AI
-          </Link>
-        </nav>
+          {/* Desktop nav links */}
+          <nav className="hidden md:flex items-center gap-1 text-sm">
+            <Link
+              to="/tools"
+              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            >
+              Browse
+            </Link>
+            <Link
+              to="/compare"
+              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            >
+              Compare
+            </Link>
+            <Link
+              to="/chat"
+              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            >
+              Ask AI
+            </Link>
+          </nav>
 
-        {/* Right side actions */}
-        <div className="flex items-center gap-1">
-          <Link
-            to="/search"
-            className="p-2 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-            aria-label="Search"
-          >
-            <Search size={18} />
-          </Link>
-          <ThemeToggle />
-          <Link
-            to="/submit"
-            className="hidden md:inline-flex text-sm font-medium px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
-          >
-            Submit tool
-          </Link>
-          <UserMenu />
-          {/* Mobile menu toggle */}
-          <button
-            type="button"
-            className="md:hidden p-2 rounded-md text-text-muted hover:bg-surface-2"
-            onClick={() => setMobileOpen((o) => !o)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Right side actions */}
+          <div className="flex items-center gap-1">
+            {/* Search — opens palette */}
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors text-sm"
+              aria-label="Search (⌘K)"
+            >
+              <Search size={14} />
+              <span className="text-xs">Search</span>
+              <kbd className="ml-1 px-1.5 py-0.5 rounded text-xs bg-surface-2 border border-border font-mono">⌘K</kbd>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="md:hidden p-2 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+              aria-label="Search"
+            >
+              <Search size={18} />
+            </button>
+            <ThemeToggle />
+            <Link
+              to="/submit"
+              className="hidden md:inline-flex text-sm font-medium px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+            >
+              Submit tool
+            </Link>
+            <UserMenu />
+            {/* Mobile menu toggle */}
+            <button
+              type="button"
+              className="md:hidden p-2 rounded-md text-text-muted hover:bg-surface-2"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label="Menu"
+            >
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Mobile nav */}
-      {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-bg py-2 px-4 flex flex-col gap-1 text-sm">
-          <Link
-            to="/tools"
-            className="py-2 text-text-muted hover:text-text"
-            onClick={() => setMobileOpen(false)}
-          >
-            Browse
-          </Link>
-          <Link
-            to="/compare"
-            className="py-2 text-text-muted hover:text-text"
-            onClick={() => setMobileOpen(false)}
-          >
-            Compare
-          </Link>
-          <Link
-            to="/chat"
-            className="py-2 text-text-muted hover:text-text"
-            onClick={() => setMobileOpen(false)}
-          >
-            Ask AI
-          </Link>
-          <Link
-            to="/submit"
-            className="py-2 text-text-muted hover:text-text"
-            onClick={() => setMobileOpen(false)}
-          >
-            Submit tool
-          </Link>
-        </div>
-      )}
-    </header>
+        {/* Mobile nav */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-border bg-bg py-2 px-4 flex flex-col gap-1 text-sm">
+            <Link
+              to="/tools"
+              className="py-2 text-text-muted hover:text-text"
+              onClick={() => setMobileOpen(false)}
+            >
+              Browse
+            </Link>
+            <Link
+              to="/compare"
+              className="py-2 text-text-muted hover:text-text"
+              onClick={() => setMobileOpen(false)}
+            >
+              Compare
+            </Link>
+            <Link
+              to="/chat"
+              className="py-2 text-text-muted hover:text-text"
+              onClick={() => setMobileOpen(false)}
+            >
+              Ask AI
+            </Link>
+            <Link
+              to="/submit"
+              className="py-2 text-text-muted hover:text-text"
+              onClick={() => setMobileOpen(false)}
+            >
+              Submit tool
+            </Link>
+          </div>
+        )}
+      </header>
+    </>
   );
 }
 

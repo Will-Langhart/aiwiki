@@ -1,3 +1,23 @@
+import { useOutletContext } from "react-router";
+import { ContentBlocks } from "@/components/tool/ContentBlocks";
+
+interface OutletContext {
+  blocks: Array<{
+    id: string;
+    tool_id: string;
+    section: string;
+    audience: "technical" | "non_technical" | "both";
+    heading: string | null;
+    body_md: string;
+    sort_order: number;
+  }>;
+}
+
+export function meta() {
+  return [{ title: "Overview" }];
+}
+
 export default function ToolOverview() {
-  return <p className="text-text-muted">Overview — coming in Phase 1.</p>;
+  const { blocks } = useOutletContext<OutletContext>();
+  return <ContentBlocks blocks={blocks} section="overview" />;
 }
