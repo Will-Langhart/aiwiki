@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase.client";
 import { ToolHeader } from "@/components/tool/ToolHeader";
 import { ToolHero } from "@/components/tool/ToolHero";
 import { AudienceToggle } from "@/components/tool/AudienceToggle";
+import { BookmarkButton } from "@/components/tool/BookmarkButton";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -159,25 +160,7 @@ export default function ToolLayout() {
   }
 
   const { tool, blocks, categoryName, isBookmarked } = data;
-
-  const handleBookmarkToggle = async () => {
-    if (!user) {
-      navigate("/submit"); // redirect to sign-in
-      return;
-    }
-    if (isBookmarked) {
-      await supabase
-        .from("bookmarks")
-        .delete()
-        .eq("tool_id", tool.id)
-        .eq("user_id", user.id);
-    } else {
-      await supabase
-        .from("bookmarks")
-        .insert({ tool_id: tool.id, user_id: user.id });
-    }
-    // Invalidation handled by re-query on next visit
-  };
+  const queryKey = ["tool", slug, user?.id];
 
   return (
     <div className="container py-6 space-y-6 max-w-5xl">
@@ -205,8 +188,16 @@ export default function ToolLayout() {
       {/* Tool header */}
       <ToolHeader
         tool={tool}
-        isBookmarked={isBookmarked}
-        onBookmarkToggle={handleBookmarkToggle}
+        bookmarkButton={
+          <BookmarkButton
+            toolId={tool.id}
+            toolSlug={tool.slug}
+            userId={user?.id}
+            isBookmarked={isBookmarked}
+            queryKey={queryKey}
+            onAuthRequired={() => navigate("/submit")}
+          />
+        }
       />
 
       {/* Hero facts */}

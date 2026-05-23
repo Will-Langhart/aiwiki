@@ -26,7 +26,10 @@ interface ToolResult {
   logo_url: string | null;
   primary_category_id: string | null;
   pricing_tier: string;
+  has_free_tier?: boolean;
   audience_fit: string;
+  api_available?: boolean;
+  open_source?: boolean;
   rank: number;
 }
 

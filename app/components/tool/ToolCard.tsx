@@ -1,10 +1,12 @@
 import { Link } from "react-router";
-import { ExternalLink, Star, GitFork, Zap } from "lucide-react";
+import { Star, GitFork, Zap, GitCompare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useCompareStore } from "@/stores/compare";
 
 interface ToolCardProps {
   tool: {
+    id: string;
     slug: string;
     name: string;
     tagline: string;
@@ -60,14 +62,40 @@ function ToolLogo({ name, logo_url }: { name: string; logo_url: string | null })
 
 export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
   const hasFreeTier = tool.has_free_tier || tool.pricing_tier === "free" || tool.pricing_tier === "freemium";
+  const { items, toggle } = useCompareStore();
+  const inCompare = items.some((i) => i.id === tool.id);
+  const compareDisabled = !inCompare && items.length >= 4;
 
   return (
+    <div className={cn("relative group", className)}>
+      {/* Compare toggle — top-right corner, visible on hover */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          if (compareDisabled) return;
+          toggle({ id: tool.id, slug: tool.slug, name: tool.name, logo_url: tool.logo_url });
+        }}
+        disabled={compareDisabled}
+        aria-label={inCompare ? `Remove ${tool.name} from comparison` : `Add ${tool.name} to comparison`}
+        aria-pressed={inCompare}
+        className={cn(
+          "absolute top-2 right-2 z-10 flex items-center justify-center w-6 h-6 rounded-md transition-all",
+          "opacity-0 group-hover:opacity-100 focus:opacity-100",
+          inCompare
+            ? "bg-accent text-accent-fg opacity-100"
+            : "bg-surface-2 text-text-subtle hover:bg-accent/10 hover:text-accent",
+          compareDisabled && "cursor-not-allowed opacity-30 group-hover:opacity-30"
+        )}
+      >
+        <GitCompare size={12} />
+      </button>
+
     <Link
       to={`/tools/${tool.slug}`}
       className={cn(
-        "group block rounded-xl border border-border bg-surface hover:bg-surface-2 hover:border-accent/30 transition-all duration-150",
+        "block rounded-xl border border-border bg-surface hover:bg-surface-2 hover:border-accent/30 transition-all duration-150",
         dense ? "p-3" : "p-4",
-        className
       )}
     >
       {/* Header row */}
@@ -124,5 +152,6 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
         )}
       </div>
     </Link>
+    </div>
   );
 }

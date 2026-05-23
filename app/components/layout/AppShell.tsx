@@ -7,6 +7,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 import { SearchCommandPalette } from "@/components/search/SearchCommandPalette";
+import { CompareTray } from "@/components/compare/CompareTray";
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -290,6 +291,8 @@ export default function AppShell() {
             <Outlet />
           </main>
           <Footer />
+          {/* Global compare tray — floats over all pages */}
+          <CompareTray />
         </div>
       </DensityProvider>
     </ThemeProvider>

@@ -1,10 +1,13 @@
-import { ExternalLink, Bookmark, BookmarkCheck, GitFork, Zap } from "lucide-react";
+import { ExternalLink, GitCompare, GitFork, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCompareStore } from "@/stores/compare";
 
 interface ToolHeaderProps {
   tool: {
+    id: string;
+    slug: string;
     name: string;
     tagline: string;
     logo_url: string | null;
@@ -16,8 +19,7 @@ interface ToolHeaderProps {
     audience_fit: string;
     model_provider: string | null;
   };
-  isBookmarked?: boolean;
-  onBookmarkToggle?: () => void;
+  bookmarkButton?: React.ReactNode;
 }
 
 const AUDIENCE_LABELS: Record<string, string> = {
@@ -33,7 +35,10 @@ const PRICING_LABELS: Record<string, string> = {
   enterprise: "Enterprise",
 };
 
-export function ToolHeader({ tool, isBookmarked = false, onBookmarkToggle }: ToolHeaderProps) {
+export function ToolHeader({ tool, bookmarkButton }: ToolHeaderProps) {
+  const { items, toggle } = useCompareStore();
+  const inCompare = items.some((i) => i.id === tool.id);
+  const compareDisabled = !inCompare && items.length >= 4;
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start">
       {/* Logo */}
@@ -95,15 +100,25 @@ export function ToolHeader({ tool, isBookmarked = false, onBookmarkToggle }: Too
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {onBookmarkToggle && (
-          <Button variant="ghost" size="icon" onClick={onBookmarkToggle} aria-label={isBookmarked ? "Remove bookmark" : "Bookmark tool"}>
-            {isBookmarked ? (
-              <BookmarkCheck size={18} className="text-accent" />
-            ) : (
-              <Bookmark size={18} />
-            )}
-          </Button>
-        )}
+        {/* Compare toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (compareDisabled) return;
+            toggle({ id: tool.id, slug: tool.slug, name: tool.name, logo_url: tool.logo_url });
+          }}
+          disabled={compareDisabled}
+          aria-label={inCompare ? "Remove from comparison" : "Add to comparison"}
+          aria-pressed={inCompare}
+          title={compareDisabled ? "Comparison tray is full (max 4)" : inCompare ? "Remove from comparison" : "Add to comparison"}
+        >
+          <GitCompare size={18} className={cn(inCompare && "text-accent")} />
+        </Button>
+
+        {/* Bookmark button — injected by parent so it can carry query key */}
+        {bookmarkButton}
+
         <a
           href={tool.website_url}
           target="_blank"
