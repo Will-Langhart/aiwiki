@@ -1,9 +1,8 @@
 /* ─── Tailwind v4 ─────────────────────────────────────────────────────────── */
 @import "tailwindcss";
 
-/* shadcn animation helpers + component layer tokens */
+/* shadcn animation helpers */
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 /* Our design tokens (--bg, --surface, --accent, etc.) */
 @import "./tokens.css";
