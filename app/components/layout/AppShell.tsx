@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 import { SearchCommandPalette } from "@/components/search/SearchCommandPalette";
 import { CompareTray } from "@/components/compare/CompareTray";
+import { NotificationBell } from "@/components/notification/NotificationBell";
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -131,6 +132,7 @@ function UserMenu() {
 function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const { user } = useCurrentUser();
 
   // Cmd+K / Ctrl+K global shortcut
   useEffect(() => {
@@ -199,6 +201,7 @@ function Nav() {
               <Search size={18} />
             </button>
             <ThemeToggle />
+            {user && <NotificationBell userId={user.id} />}
             <Link
               to="/submit"
               className="hidden md:inline-flex text-sm font-medium px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"

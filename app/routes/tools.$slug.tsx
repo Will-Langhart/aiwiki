@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet, useParams, NavLink, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Route } from "./+types/tools.$slug";
@@ -6,6 +7,8 @@ import { ToolHeader } from "@/components/tool/ToolHeader";
 import { ToolHero } from "@/components/tool/ToolHero";
 import { AudienceToggle } from "@/components/tool/AudienceToggle";
 import { BookmarkButton } from "@/components/tool/BookmarkButton";
+import { RatingDisplay } from "@/components/tool/RatingDisplay";
+import { RatingInput } from "@/components/tool/RatingInput";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -52,11 +55,23 @@ interface ContentBlock {
   sort_order: number;
 }
 
+interface RatingStats {
+  avg_stars: number | null;
+  rating_count: number;
+}
+
+interface UserRating {
+  stars: number;
+  review_text: string | null;
+}
+
 interface ToolData {
   tool: FullTool;
   blocks: ContentBlock[];
   categoryName: string | null;
   isBookmarked: boolean;
+  ratingStats: RatingStats;
+  userRating: UserRating | null;
 }
 
 async function fetchToolData(slug: string, userId?: string): Promise<ToolData | null> {
@@ -69,7 +84,7 @@ async function fetchToolData(slug: string, userId?: string): Promise<ToolData | 
 
   if (error || !tool) return null;
 
-  const [{ data: blocks }, { data: category }, { data: bookmark }] = await Promise.all([
+  const [{ data: blocks }, { data: category }, { data: bookmark }, { data: ratingStats }, { data: userRating }] = await Promise.all([
     supabase
       .from("content_blocks")
       .select("*")
@@ -90,6 +105,19 @@ async function fetchToolData(slug: string, userId?: string): Promise<ToolData | 
           .eq("user_id", userId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("tool_rating_stats")
+      .select("avg_stars, rating_count")
+      .eq("tool_id", tool.id)
+      .maybeSingle(),
+    userId
+      ? supabase
+          .from("ratings")
+          .select("stars, review_text")
+          .eq("tool_id", tool.id)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   return {
@@ -97,6 +125,11 @@ async function fetchToolData(slug: string, userId?: string): Promise<ToolData | 
     blocks: (blocks as ContentBlock[]) ?? [],
     categoryName: (category as { name: string } | null)?.name ?? null,
     isBookmarked: !!bookmark,
+    ratingStats: {
+      avg_stars: (ratingStats as RatingStats | null)?.avg_stars ?? null,
+      rating_count: (ratingStats as RatingStats | null)?.rating_count ?? 0,
+    },
+    userRating: (userRating as UserRating | null) ?? null,
   };
 }
 
@@ -131,6 +164,7 @@ export default function ToolLayout() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tool", slug, user?.id],
@@ -159,7 +193,7 @@ export default function ToolLayout() {
     );
   }
 
-  const { tool, blocks, categoryName, isBookmarked } = data;
+  const { tool, blocks, categoryName, isBookmarked, ratingStats, userRating } = data;
   const queryKey = ["tool", slug, user?.id];
 
   return (
@@ -202,6 +236,26 @@ export default function ToolLayout() {
 
       {/* Hero facts */}
       <ToolHero tool={tool} />
+
+      {/* Rating summary */}
+      <RatingDisplay
+        avgStars={ratingStats.avg_stars}
+        ratingCount={ratingStats.rating_count}
+        onRateClick={user ? () => setRatingOpen(true) : undefined}
+      />
+
+      {/* Rating dialog */}
+      {user && (
+        <RatingInput
+          toolId={tool.id}
+          toolName={tool.name}
+          userId={user.id}
+          existingRating={userRating ?? undefined}
+          queryKey={queryKey}
+          open={ratingOpen}
+          onOpenChange={setRatingOpen}
+        />
+      )}
 
       {/* Tab nav + audience toggle */}
       <div className="flex items-center justify-between border-b border-border pb-0">

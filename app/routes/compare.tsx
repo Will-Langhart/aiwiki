@@ -3,11 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { Route } from "./+types/compare";
 import { supabase } from "@/lib/supabase.client";
 import { CompareTable } from "@/components/compare/CompareTable";
+import { CompareSummary } from "@/components/compare/CompareSummary";
 import { useCompareStore } from "@/stores/compare";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GitCompare, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -171,6 +174,12 @@ export default function ComparePage() {
         </div>
       ) : (
         <>
+          {/* AI comparison summary */}
+          <CompareSummary
+            toolSlugs={tools.map((t) => t.slug)}
+            supabaseUrl={SUPABASE_URL}
+          />
+
           <CompareTable tools={tools} />
 
           {/* Add another tool CTA */}
