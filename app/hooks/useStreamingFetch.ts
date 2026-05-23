@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase.client";
 
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 interface StreamOptions {
   url: string;
   body: Record<string, unknown>;
@@ -31,13 +33,15 @@ export function useStreamingFetch() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : "";
+      const authHeader = session?.access_token
+        ? `Bearer ${session.access_token}`
+        : `Bearer ${ANON_KEY}`;
 
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authHeader ? { Authorization: authHeader } : {}),
+          Authorization: authHeader,
         },
         body: JSON.stringify(body),
         signal: controller.signal,

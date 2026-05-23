@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, RotateCcw } from "lucide-react";
+import { Send, Sparkles, RotateCcw, ArrowDown } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
 import { ToolCitationCard } from "@/components/chat/ToolCitationCard";
 import { cn } from "@/lib/utils";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface CitedTool {
   id: string;
@@ -21,29 +24,37 @@ interface Message {
   content: string;
   citations?: CitedTool[];
   streaming?: boolean;
+  error?: boolean;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
 const SUGGESTED_PROMPTS = [
-  "What's the best AI coding assistant in 2025?",
+  "What's the best AI coding assistant?",
   "Compare free AI image generators",
-  "What AI tools help with writing?",
-  "Which AI tools have a free tier?",
+  "Best AI tools for writing and editing",
+  "Which AI tools have a generous free tier?",
 ];
 
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-accent text-accent-fg px-4 py-2.5 text-sm">
+      <div className="max-w-[78%] rounded-2xl rounded-tr-sm bg-accent text-accent-fg px-4 py-2.5 text-sm leading-relaxed">
         {content}
       </div>
     </div>
   );
 }
 
-function AssistantBubble({ content, citations, streaming }: { content: string; citations?: CitedTool[]; streaming?: boolean }) {
-  // Replace [tool:slug] with tool name for display — cards render below
+function AssistantBubble({
+  content,
+  citations,
+  streaming,
+  error,
+}: {
+  content: string;
+  citations?: CitedTool[];
+  streaming?: boolean;
+  error?: boolean;
+}) {
   const displayContent = content.replace(/\[tool:([a-z0-9-]+)\]/g, (_, slug) => {
     const tool = citations?.find((t) => t.slug === slug);
     return tool ? `**${tool.name}**` : `\`${slug}\``;
@@ -51,29 +62,34 @@ function AssistantBubble({ content, citations, streaming }: { content: string; c
 
   return (
     <div className="flex gap-3 items-start">
-      <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Sparkles size={14} className="text-accent" />
+      <div className="w-7 h-7 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Sparkles size={13} className="text-accent" />
       </div>
       <div className="flex-1 min-w-0 space-y-3">
-        <div className={cn("text-sm text-text leading-relaxed prose prose-sm dark:prose-invert max-w-none", !content && "text-text-muted")}>
-          {content ? (
-            <>
-              <MarkdownRenderer content={displayContent} />
-              {streaming && (
-                <span className="inline-block w-1.5 h-4 bg-accent ml-0.5 animate-pulse rounded-sm align-middle" />
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
-              Thinking…
-            </div>
-          )}
-        </div>
+        {!content && streaming ? (
+          <div className="flex items-center gap-2 text-sm text-text-muted py-1">
+            <span className="flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:300ms]" />
+            </span>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none",
+              error && "text-danger",
+            )}
+          >
+            <MarkdownRenderer content={displayContent} />
+            {streaming && (
+              <span className="inline-block w-1.5 h-4 bg-accent ml-0.5 animate-pulse rounded-sm align-middle" />
+            )}
+          </div>
+        )}
 
-        {/* Citation cards */}
         {citations && citations.length > 0 && !streaming && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {citations.map((tool) => (
               <ToolCitationCard key={tool.id} tool={tool} />
             ))}
@@ -90,17 +106,46 @@ export function ChatInterface() {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Scroll to bottom when messages update
+  // Auto-resize textarea
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resize on input change
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [input]);
+
+  // Auto-scroll to bottom on new messages
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollAreaRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Show scroll-to-bottom button when far from bottom
+  useEffect(() => {
+    const el = scrollAreaRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || sending) return;
+
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text.trim() };
     const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: "", streaming: true };
 
@@ -110,21 +155,25 @@ export function ChatInterface() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : "";
+      const authHeader = session?.access_token
+        ? `Bearer ${session.access_token}`
+        : `Bearer ${ANON_KEY}`;
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authHeader ? { Authorization: authHeader } : {}),
+          Authorization: authHeader,
         },
         body: JSON.stringify({ session_id: sessionId, message: text.trim() }),
       });
 
       if (!res.ok || !res.body) {
-        const err = await res.text();
+        const errJson = await res.text();
+        let errMsg = `HTTP ${res.status}`;
+        try { errMsg = JSON.parse(errJson).message ?? errMsg; } catch { /* use status */ }
         setMessages((prev) =>
-          prev.map((m) => m.id === assistantMsg.id ? { ...m, content: `Error: ${err}`, streaming: false } : m)
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, content: errMsg, streaming: false, error: true } : m)
         );
         return;
       }
@@ -158,9 +207,10 @@ export function ChatInterface() {
               setSessionId(event.session_id);
             } else if (event.type === "content_block_delta" && event.delta?.text) {
               setMessages((prev) =>
-                prev.map((m) => m.id === assistantMsg.id
-                  ? { ...m, content: m.content + (event.delta?.text ?? "") }
-                  : m
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: m.content + (event.delta?.text ?? "") }
+                    : m
                 )
               );
             } else if (event.type === "citations" && event.tools) {
@@ -169,9 +219,10 @@ export function ChatInterface() {
               );
             } else if (event.type === "error") {
               setMessages((prev) =>
-                prev.map((m) => m.id === assistantMsg.id
-                  ? { ...m, content: `Error: ${event.error}`, streaming: false }
-                  : m
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: event.error ?? "Unknown error", streaming: false, error: true }
+                    : m
                 )
               );
             }
@@ -187,7 +238,9 @@ export function ChatInterface() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Network error";
       setMessages((prev) =>
-        prev.map((m) => m.id === assistantMsg.id ? { ...m, content: `Error: ${msg}`, streaming: false } : m)
+        prev.map((m) =>
+          m.id === assistantMsg.id ? { ...m, content: msg, streaming: false, error: true } : m
+        )
       );
     } finally {
       setSending(false);
@@ -205,31 +258,31 @@ export function ChatInterface() {
   const reset = () => {
     setMessages([]);
     setSessionId(null);
-    inputRef.current?.focus();
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+    <div className="flex flex-col h-full relative">
+      {/* Conversation area */}
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-6">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
-              <Sparkles size={24} className="text-accent" />
+          <div className="flex flex-col items-center justify-center h-full text-center gap-5 px-4 py-12">
+            <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
+              <Sparkles size={22} className="text-accent" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-text mb-2">Ask AI Wiki</h2>
-              <p className="text-text-muted text-sm max-w-sm">
-                Find the perfect AI tool for your use case. I'll search our directory and give you personalised recommendations.
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-bold text-text">Ask AI Wiki</h2>
+              <p className="text-text-muted text-sm max-w-xs">
+                Find the right AI tool for your use case. I'll search our directory and give you honest recommendations.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mt-2">
               {SUGGESTED_PROMPTS.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
                   onClick={() => sendMessage(prompt)}
-                  className="text-left px-3 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-sm text-text-muted hover:text-text transition-colors"
+                  className="text-left px-3.5 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-2 hover:border-accent/30 text-sm text-text-muted hover:text-text transition-all"
                 >
                   {prompt}
                 </button>
@@ -237,38 +290,54 @@ export function ChatInterface() {
             </div>
           </div>
         ) : (
-          messages.map((msg) =>
-            msg.role === "user" ? (
-              <UserBubble key={msg.id} content={msg.content} />
-            ) : (
-              <AssistantBubble
-                key={msg.id}
-                content={msg.content}
-                citations={msg.citations}
-                streaming={msg.streaming}
-              />
-            )
-          )
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            {messages.map((msg) =>
+              msg.role === "user" ? (
+                <UserBubble key={msg.id} content={msg.content} />
+              ) : (
+                <AssistantBubble
+                  key={msg.id}
+                  content={msg.content}
+                  citations={msg.citations}
+                  streaming={msg.streaming}
+                  error={msg.error}
+                />
+              )
+            )}
+            <div ref={bottomRef} />
+          </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
+      {/* Scroll-to-bottom button */}
+      {showScrollBtn && (
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          className="absolute bottom-24 right-6 p-2 rounded-full bg-surface border border-border shadow-md text-text-muted hover:text-text transition-colors"
+          aria-label="Scroll to bottom"
+        >
+          <ArrowDown size={16} />
+        </button>
+      )}
+
       {/* Input area */}
-      <div className="border-t border-border bg-bg px-4 py-3">
+      <div className="border-t border-border bg-bg/80 backdrop-blur-sm px-4 py-3">
         {!user && (
-          <p className="text-xs text-text-muted text-center mb-2">
-            Sign in to save your chat history. Anonymous sessions limited to 5 messages/day.
+          <p className="text-xs text-text-subtle text-center mb-2">
+            Sign in to save history · Anonymous sessions limited to 5 messages/day
           </p>
         )}
-        <div className="flex items-end gap-2 max-w-3xl mx-auto">
+        <div className="flex items-end gap-2 max-w-2xl mx-auto">
           {messages.length > 0 && (
             <button
               type="button"
               onClick={reset}
-              className="p-2 rounded-lg text-text-subtle hover:text-text hover:bg-surface-2 transition-colors flex-shrink-0"
+              title="New conversation"
+              className="p-2 rounded-lg text-text-subtle hover:text-text hover:bg-surface-2 transition-colors flex-shrink-0 mb-0.5"
               aria-label="New conversation"
             >
-              <RotateCcw size={16} />
+              <RotateCcw size={15} />
             </button>
           )}
           <div className="flex-1 relative">
@@ -277,17 +346,16 @@ export function ChatInterface() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about AI tools…"
+              placeholder="Ask about AI tools… (Shift+Enter for new line)"
               rows={1}
               disabled={sending}
-              className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors pr-12 max-h-32"
-              style={{ overflowY: "auto" }}
+              className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors pr-12 overflow-y-auto"
             />
             <button
               type="button"
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || sending}
-              className="absolute right-2 bottom-2 p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              className="absolute right-2 bottom-2 p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               aria-label="Send message"
             >
               <Send size={14} />

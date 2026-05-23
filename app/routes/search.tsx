@@ -16,6 +16,7 @@ export function meta(_: Route.MetaArgs) {
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface SearchResult {
   id: string;
@@ -45,13 +46,15 @@ async function runFtsSearch(query: string): Promise<SearchResult[]> {
 async function runVectorSearch(query: string): Promise<SearchResult[]> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    const authHeader = session?.access_token ? `Bearer ${session.access_token}` : "";
+    const authHeader = session?.access_token
+      ? `Bearer ${session.access_token}`
+      : `Bearer ${ANON_KEY}`;
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/semantic-search`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(authHeader ? { Authorization: authHeader } : {}),
+        Authorization: authHeader,
       },
       body: JSON.stringify({ query, limit: 24 }),
     });
