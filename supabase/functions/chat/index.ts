@@ -186,14 +186,18 @@ ${toolContext ? `Available tool context:\n${toolContext}` : "No matching tools f
       },
     });
 
-    // Stream session_id first so client can use it
-    await writer.write(new TextEncoder().encode(
-      `data: ${JSON.stringify({ type: "session", session_id: sessionId })}\n\n`
-    ));
-
+    // Fire-and-forget streaming IIFE — must start BEFORE return so that
+    // return streamResponse runs first and establishes the reader on the
+    // readable side. Without a reader, TransformStream's default
+    // highWaterMark:0 causes any writer.write() to deadlock.
     (async () => {
       let fullText = "";
       try {
+        // Send session_id first so the client can correlate multi-turn requests
+        await writer.write(new TextEncoder().encode(
+          `data: ${JSON.stringify({ type: "session", session_id: sessionId })}\n\n`
+        ));
+
         const stream = anthropic.messages.stream({
           model: "claude-sonnet-4-5",
           max_tokens: 1024,
