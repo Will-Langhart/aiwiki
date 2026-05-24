@@ -26,6 +26,7 @@ interface FullTool {
   name: string;
   tagline: string;
   website_url: string;
+  affiliate_url: string | null;
   logo_url: string | null;
   primary_category_id: string | null;
   pricing_tier: string;

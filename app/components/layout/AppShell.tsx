@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { SearchCommandPalette } from "@/components/search/SearchCommandPalette";
 import { CompareTray } from "@/components/compare/CompareTray";
 import { NotificationBell } from "@/components/notification/NotificationBell";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { useAuthModalStore } from "@/stores/auth-modal";
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -27,6 +29,7 @@ function ThemeToggle() {
 function UserMenu() {
   const { user, profile, isAdmin, loading } = useCurrentUser();
   const navigate = useNavigate();
+  const { openModal } = useAuthModalStore();
   const [open, setOpen] = useState(false);
 
   if (loading) {
@@ -35,12 +38,13 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <Link
-        to="/submit"
+      <button
+        type="button"
+        onClick={() => openModal(window.location.pathname)}
         className="text-sm font-medium px-3 py-1.5 rounded-md bg-accent text-accent-fg hover:opacity-90 transition-opacity"
       >
         Sign in
-      </Link>
+      </button>
     );
   }
 
@@ -296,6 +300,8 @@ export default function AppShell() {
           <Footer />
           {/* Global compare tray — floats over all pages */}
           <CompareTray />
+          {/* Global auth modal — opened from anywhere via useAuthModalStore */}
+          <AuthModal />
         </div>
       </DensityProvider>
     </ThemeProvider>

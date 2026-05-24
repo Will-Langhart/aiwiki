@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCompareStore } from "@/stores/compare";
+import { trackOutboundClick } from "@/lib/tracking";
 
 interface ToolHeaderProps {
   tool: {
@@ -12,6 +13,7 @@ interface ToolHeaderProps {
     tagline: string;
     logo_url: string | null;
     website_url: string;
+    affiliate_url?: string | null;
     pricing_tier: string;
     has_free_tier: boolean;
     open_source: boolean;
@@ -39,6 +41,10 @@ export function ToolHeader({ tool, bookmarkButton }: ToolHeaderProps) {
   const { items, toggle } = useCompareStore();
   const inCompare = items.some((i) => i.id === tool.id);
   const compareDisabled = !inCompare && items.length >= 4;
+
+  /** Affiliate URL takes priority; falls back to the canonical website URL */
+  const outboundUrl = tool.affiliate_url || tool.website_url;
+
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start">
       {/* Logo */}
@@ -120,9 +126,10 @@ export function ToolHeader({ tool, bookmarkButton }: ToolHeaderProps) {
         {bookmarkButton}
 
         <a
-          href={tool.website_url}
+          href={outboundUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackOutboundClick(tool.id)}
           className={cn(buttonVariants({ variant: "default" }))}
         >
           Visit <ExternalLink size={14} className="ml-1" />

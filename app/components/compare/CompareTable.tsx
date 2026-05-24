@@ -1,6 +1,7 @@
 import { Check, X, Minus, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { trackOutboundClick } from "@/lib/tracking";
 
 interface ComparableTool {
   id: string;
@@ -8,6 +9,7 @@ interface ComparableTool {
   name: string;
   tagline: string;
   website_url: string;
+  affiliate_url?: string | null;
   logo_url: string | null;
   pricing_tier: string;
   has_free_tier: boolean;
@@ -174,9 +176,10 @@ export function CompareTable({ tools }: CompareTableProps) {
                     </p>
                   </div>
                   <a
-                    href={tool.website_url}
+                    href={tool.affiliate_url || tool.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackOutboundClick(tool.id)}
                     className="text-xs text-accent hover:underline flex items-center gap-0.5"
                   >
                     Visit <ExternalLink size={10} />

@@ -479,6 +479,38 @@ export type Database = {
           },
         ]
       }
+      outbound_clicks: {
+        Row: {
+          created_at: string
+          id: string
+          referrer: string | null
+          tool_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          tool_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          tool_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_clicks_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -828,6 +860,7 @@ export type Database = {
       }
       tools: {
         Row: {
+          affiliate_url: string | null
           api_available: boolean
           audience_fit: string
           created_at: string
@@ -858,6 +891,7 @@ export type Database = {
           website_url: string
         }
         Insert: {
+          affiliate_url?: string | null
           api_available?: boolean
           audience_fit: string
           created_at?: string
@@ -888,6 +922,7 @@ export type Database = {
           website_url: string
         }
         Update: {
+          affiliate_url?: string | null
           api_available?: boolean
           audience_fit?: string
           created_at?: string
@@ -940,6 +975,35 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      llm_cost_by_feature: {
+        Args: { since?: string }
+        Returns: {
+          call_count: number
+          feature: string
+          total_cost: number
+        }[]
+      }
+      match_tools: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          api_available: boolean
+          audience_fit: string
+          has_free_tier: boolean
+          id: string
+          logo_url: string
+          name: string
+          open_source: boolean
+          pricing_tier: string
+          primary_category_id: string
+          similarity: number
+          slug: string
+          tagline: string
+        }[]
+      }
       search_tools: {
         Args: {
           audiences?: string[]
