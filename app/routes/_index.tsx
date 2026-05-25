@@ -65,7 +65,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="relative container py-20 sm:py-28 text-center max-w-3xl mx-auto overflow-hidden">
+      <section className="relative container pt-12 pb-8 sm:pt-16 sm:pb-10 text-center max-w-3xl mx-auto overflow-hidden">
         {/* Background glow */}
         <div
           className="pointer-events-none absolute inset-0 -z-10"
@@ -81,7 +81,7 @@ export default function Home() {
         </div>
 
         {/* Headline */}
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
           Find the right AI tool
           <br />
           <span
@@ -92,7 +92,7 @@ export default function Home() {
           </span>
         </h1>
 
-        <p className="text-lg text-text-muted mb-8 leading-relaxed max-w-xl mx-auto">
+        <p className="text-base text-text-muted mb-6 leading-relaxed max-w-xl mx-auto">
           Browse and compare AI tools with structured data, real screenshots, and community
           ratings. Or just ask — our AI assistant knows the catalog.
         </p>
@@ -135,7 +135,7 @@ export default function Home() {
         </div>
 
         {/* Stat strip */}
-        <div className="flex items-center justify-center gap-8 mt-10">
+        <div className="flex items-center justify-center gap-8 mt-8">
           {stats.map((s) => (
             <div key={s.label} className="text-center">
               <div className="text-xl font-bold text-text">{s.value}</div>

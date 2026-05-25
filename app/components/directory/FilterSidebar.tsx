@@ -1,6 +1,5 @@
 import { useSearchParams } from "react-router";
 import { X } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 interface Category {
@@ -29,9 +28,9 @@ const AUDIENCE_OPTIONS = [
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">{title}</p>
-      <div className="space-y-1.5">{children}</div>
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold text-text-subtle uppercase tracking-widest px-3">{title}</p>
+      <div className="space-y-0.5">{children}</div>
     </div>
   );
 }
@@ -67,18 +66,21 @@ function CheckboxFilter({
   return (
     <label
       htmlFor={id}
-      className="flex items-center gap-2 cursor-pointer group"
+      className={cn(
+        "flex items-center gap-2.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors",
+        checked
+          ? "bg-accent/10 text-accent"
+          : "hover:bg-surface-2 text-text-muted hover:text-text"
+      )}
     >
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={toggle}
-        className="w-4 h-4 rounded border border-border bg-surface text-accent accent-accent cursor-pointer"
+        className="w-3.5 h-3.5 rounded border border-border bg-surface accent-[var(--accent)] cursor-pointer flex-shrink-0"
       />
-      <span className="text-sm text-text-muted group-hover:text-text transition-colors">
-        {label}
-      </span>
+      <span className="text-sm leading-none">{label}</span>
     </label>
   );
 }
@@ -100,17 +102,23 @@ function BooleanFilter({ param, label }: { param: string; label: string }) {
   };
 
   return (
-    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer group">
+    <label
+      htmlFor={id}
+      className={cn(
+        "flex items-center gap-2.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors",
+        checked
+          ? "bg-accent/10 text-accent"
+          : "hover:bg-surface-2 text-text-muted hover:text-text"
+      )}
+    >
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={toggle}
-        className="w-4 h-4 rounded border border-border bg-surface text-accent accent-accent cursor-pointer"
+        className="w-3.5 h-3.5 rounded border border-border bg-surface accent-[var(--accent)] cursor-pointer flex-shrink-0"
       />
-      <span className="text-sm text-text-muted group-hover:text-text transition-colors">
-        {label}
-      </span>
+      <span className="text-sm leading-none">{label}</span>
     </label>
   );
 }
@@ -133,54 +141,56 @@ export function FilterSidebar({ categories, className }: FilterSidebarProps) {
   };
 
   return (
-    <aside className={cn("space-y-5", className)}>
+    <aside className={cn("rounded-xl border border-border bg-surface shadow-[var(--shadow-card)] overflow-hidden", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-3 py-3 border-b border-border/60">
         <p className="text-sm font-semibold text-text">Filters</p>
         {hasFilters && (
           <button
             type="button"
             onClick={clearFilters}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors"
+            className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors"
           >
-            <X size={12} />
-            Clear
+            <X size={11} />
+            Clear all
           </button>
         )}
       </div>
 
-      {/* Categories */}
-      <FilterSection title="Category">
-        {categories.map((cat) => (
-          <CheckboxFilter key={cat.slug} param="cat" value={cat.slug} label={cat.name} />
-        ))}
-      </FilterSection>
+      <div className="py-3 space-y-4">
+        {/* Categories */}
+        <FilterSection title="Category">
+          {categories.map((cat) => (
+            <CheckboxFilter key={cat.slug} param="cat" value={cat.slug} label={cat.name} />
+          ))}
+        </FilterSection>
 
-      <Separator />
+        <div className="border-t border-border/40 mx-3" />
 
-      {/* Pricing */}
-      <FilterSection title="Pricing">
-        {PRICING_OPTIONS.map((opt) => (
-          <CheckboxFilter key={opt.value} param="pricing" value={opt.value} label={opt.label} />
-        ))}
-      </FilterSection>
+        {/* Pricing */}
+        <FilterSection title="Pricing">
+          {PRICING_OPTIONS.map((opt) => (
+            <CheckboxFilter key={opt.value} param="pricing" value={opt.value} label={opt.label} />
+          ))}
+        </FilterSection>
 
-      <Separator />
+        <div className="border-t border-border/40 mx-3" />
 
-      {/* Audience */}
-      <FilterSection title="Audience">
-        {AUDIENCE_OPTIONS.map((opt) => (
-          <CheckboxFilter key={opt.value} param="audience" value={opt.value} label={opt.label} />
-        ))}
-      </FilterSection>
+        {/* Audience */}
+        <FilterSection title="Audience">
+          {AUDIENCE_OPTIONS.map((opt) => (
+            <CheckboxFilter key={opt.value} param="audience" value={opt.value} label={opt.label} />
+          ))}
+        </FilterSection>
 
-      <Separator />
+        <div className="border-t border-border/40 mx-3" />
 
-      {/* Feature flags */}
-      <FilterSection title="Features">
-        <BooleanFilter param="api" label="Has API" />
-        <BooleanFilter param="oss" label="Open source" />
-      </FilterSection>
+        {/* Feature flags */}
+        <FilterSection title="Features">
+          <BooleanFilter param="api" label="Has API" />
+          <BooleanFilter param="oss" label="Open source" />
+        </FilterSection>
+      </div>
     </aside>
   );
 }

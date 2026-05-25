@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { Moon, Sun, Search, Menu, X, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -166,24 +166,26 @@ function Nav() {
 
           {/* Desktop nav links */}
           <nav className="hidden md:flex items-center gap-0.5 text-sm">
-            <Link
-              to="/tools"
-              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-            >
-              Browse
-            </Link>
-            <Link
-              to="/compare"
-              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-            >
-              Compare
-            </Link>
-            <Link
-              to="/chat"
-              className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-            >
-              Ask AI
-            </Link>
+            {[
+              { to: "/tools", label: "Browse" },
+              { to: "/compare", label: "Compare" },
+              { to: "/chat", label: "Ask AI" },
+            ].map(({ to, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "px-3 py-1.5 rounded-md transition-colors outline-none",
+                    isActive
+                      ? "text-text bg-surface-2 font-medium"
+                      : "text-text-muted hover:text-text hover:bg-surface-2"
+                  )
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
           </nav>
 
           {/* Right side actions */}
@@ -268,23 +270,47 @@ function Nav() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border mt-auto py-8 text-sm text-text-muted">
-      <div className="container flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Sparkles size={14} className="text-accent" />
-          <span className="font-medium text-text">AI Wiki</span>
-          <span>— community-curated AI tool directory</span>
+    <footer className="border-t border-border mt-auto text-sm text-text-muted">
+      <div className="container py-10">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-8">
+          {/* Brand */}
+          <div className="space-y-2 max-w-xs">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
+              >
+                <Sparkles size={12} className="text-white" />
+              </div>
+              <span className="font-semibold text-text">AI Wiki</span>
+            </div>
+            <p className="text-xs text-text-subtle leading-relaxed">
+              Community-curated directory of AI tools. Discover, compare, and find the right tool for every workflow.
+            </p>
+          </div>
+
+          {/* Links */}
+          <div className="flex flex-col sm:flex-row gap-8">
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-text-subtle uppercase tracking-widest">Explore</p>
+              <div className="space-y-1.5">
+                <Link to="/tools" className="block hover:text-text transition-colors">Browse tools</Link>
+                <Link to="/compare" className="block hover:text-text transition-colors">Compare</Link>
+                <Link to="/chat" className="block hover:text-text transition-colors">Ask AI Wiki</Link>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-text-subtle uppercase tracking-widest">Contribute</p>
+              <div className="space-y-1.5">
+                <Link to="/submit" className="block hover:text-text transition-colors">Submit a tool</Link>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Link to="/tools" className="hover:text-text transition-colors">
-            Browse
-          </Link>
-          <Link to="/submit" className="hover:text-text transition-colors">
-            Submit
-          </Link>
-          <Link to="/chat" className="hover:text-text transition-colors">
-            Ask AI
-          </Link>
+
+        {/* Bottom bar */}
+        <div className="border-t border-border/60 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-text-subtle">© {new Date().getFullYear()} AI Wiki. Free to use.</p>
         </div>
       </div>
     </footer>
