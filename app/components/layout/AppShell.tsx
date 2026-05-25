@@ -153,16 +153,19 @@ function Nav() {
   return (
     <>
       <SearchCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur border-b border-border">
+      <header className="sticky top-0 z-40 bg-bg/85 backdrop-blur-md border-b border-border/80 shadow-[var(--shadow-nav)]">
         <div className="container flex items-center justify-between h-14 gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-text shrink-0">
-            <Sparkles size={18} className="text-accent" />
-            <span>AI Wiki</span>
+          <Link to="/" className="flex items-center gap-2 font-bold text-text shrink-0 group">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-opacity group-hover:opacity-80"
+              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
+              <Sparkles size={14} className="text-white" />
+            </div>
+            <span className="tracking-tight">AI Wiki</span>
           </Link>
 
           {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-1 text-sm">
+          <nav className="hidden md:flex items-center gap-0.5 text-sm">
             <Link
               to="/tools"
               className="px-3 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
@@ -184,17 +187,17 @@ function Nav() {
           </nav>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Search — opens palette */}
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors text-sm"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-surface text-text-muted hover:text-text hover:border-text-subtle transition-all text-sm"
               aria-label="Search (⌘K)"
             >
-              <Search size={14} />
-              <span className="text-xs">Search</span>
-              <kbd className="ml-1 px-1.5 py-0.5 rounded text-xs bg-surface-2 border border-border font-mono">⌘K</kbd>
+              <Search size={13} />
+              <span className="text-xs text-text-subtle">Search…</span>
+              <kbd className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border font-mono text-text-subtle">⌘K</kbd>
             </button>
             <button
               type="button"
@@ -208,7 +211,7 @@ function Nav() {
             {user && <NotificationBell userId={user.id} />}
             <Link
               to="/submit"
-              className="hidden md:inline-flex text-sm font-medium px-3 py-1.5 rounded-md border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+              className="hidden md:inline-flex text-sm font-medium px-3 py-1.5 rounded-lg border border-border text-text-muted hover:text-text hover:border-text-subtle transition-colors"
             >
               Submit tool
             </Link>
@@ -227,31 +230,31 @@ function Nav() {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-border bg-bg py-2 px-4 flex flex-col gap-1 text-sm">
+          <div className="md:hidden border-t border-border bg-bg/95 backdrop-blur-md py-2 px-4 flex flex-col gap-0.5 text-sm">
             <Link
               to="/tools"
-              className="py-2 text-text-muted hover:text-text"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               Browse
             </Link>
             <Link
               to="/compare"
-              className="py-2 text-text-muted hover:text-text"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               Compare
             </Link>
             <Link
               to="/chat"
-              className="py-2 text-text-muted hover:text-text"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               Ask AI
             </Link>
             <Link
               to="/submit"
-              className="py-2 text-text-muted hover:text-text"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               Submit tool
