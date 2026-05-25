@@ -321,26 +321,26 @@ export function ChatInterface() {
         </button>
       )}
 
-      {/* Input area */}
-      <div className="border-t border-border bg-bg/80 backdrop-blur-sm px-4 py-3">
+      {/* Input area — floating, no divider line */}
+      <div className="px-4 pb-5 pt-2">
         {!user && (
           <p className="text-xs text-text-subtle text-center mb-2">
             Sign in to save history · Anonymous sessions limited to 5 messages/day
           </p>
         )}
-        <div className="flex items-end gap-2 max-w-2xl mx-auto">
-          {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={reset}
-              title="New conversation"
-              className="p-2 rounded-lg text-text-subtle hover:text-text hover:bg-surface-2 transition-colors flex-shrink-0 mb-0.5"
-              aria-label="New conversation"
-            >
-              <RotateCcw size={15} />
-            </button>
-          )}
-          <div className="flex-1 relative">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface shadow-[var(--shadow-card-hover)] px-3 py-2 focus-within:border-accent/50 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_12%,transparent)] transition-all">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={reset}
+                title="New conversation"
+                className="p-1.5 rounded-lg text-text-subtle hover:text-text hover:bg-surface-2 transition-colors flex-shrink-0 mb-0.5"
+                aria-label="New conversation"
+              >
+                <RotateCcw size={15} />
+              </button>
+            )}
             <textarea
               ref={inputRef}
               value={input}
@@ -349,13 +349,13 @@ export function ChatInterface() {
               placeholder="Ask about AI tools… (Shift+Enter for new line)"
               rows={1}
               disabled={sending}
-              className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors pr-12 overflow-y-auto"
+              className="flex-1 resize-none bg-transparent py-1.5 text-sm text-text placeholder:text-text-subtle focus:outline-none overflow-y-auto min-w-0"
             />
             <button
               type="button"
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || sending}
-              className="absolute right-2 bottom-2 p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              className="p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-90 transition-all flex-shrink-0 mb-0.5"
               aria-label="Send message"
             >
               <Send size={14} />
