@@ -146,7 +146,7 @@ export default function Home() {
       </section>
 
       {/* Category tiles */}
-      <section className="container pb-12">
+      <section className="container mx-auto pb-12">
         <h2 className="text-xs font-semibold text-text-subtle uppercase tracking-widest mb-4 text-center">
           Browse by category
         </h2>
@@ -169,7 +169,7 @@ export default function Home() {
       </section>
 
       {/* Feature grid */}
-      <section className="container pb-20">
+      <section className="container mx-auto pb-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {features.map(({ icon: Icon, title, body }) => (
             <div
