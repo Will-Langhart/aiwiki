@@ -56,6 +56,13 @@
   --radius: 0.5rem;
 }
 
+/* ─── Container: centered with horizontal padding ────────────────────────── */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  max-width: 1280px;
+}
+
 /* ─── Base layer overrides ────────────────────────────────────────────────── */
 @layer base {
   *,
