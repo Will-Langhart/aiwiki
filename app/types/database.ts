@@ -876,6 +876,7 @@ export type Database = {
           model_provider: string | null
           name: string
           open_source: boolean
+          popularity_score: number
           pricing_currency: string
           pricing_starts_at: number | null
           pricing_tier: string
@@ -907,6 +908,7 @@ export type Database = {
           model_provider?: string | null
           name: string
           open_source?: boolean
+          popularity_score?: number
           pricing_currency?: string
           pricing_starts_at?: number | null
           pricing_tier: string
@@ -938,6 +940,7 @@ export type Database = {
           model_provider?: string | null
           name?: string
           open_source?: boolean
+          popularity_score?: number
           pricing_currency?: string
           pricing_starts_at?: number | null
           pricing_tier?: string
@@ -1016,13 +1019,20 @@ export type Database = {
           query?: string
         }
         Returns: {
+          api_available: boolean
           audience_fit: string
+          avg_stars: number
+          category_name: string
+          category_slug: string
+          has_free_tier: boolean
           id: string
           logo_url: string
           name: string
+          open_source: boolean
           pricing_tier: string
           primary_category_id: string
           rank: number
+          rating_count: number
           slug: string
           tagline: string
         }[]
