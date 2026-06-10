@@ -1,6 +1,6 @@
 {
   "framework": "react-router",
-  "buildCommand": "react-router build",
+  "buildCommand": "npm run build",
   "outputDirectory": "build/client",
   "installCommand": "npm install",
   "crons": [
