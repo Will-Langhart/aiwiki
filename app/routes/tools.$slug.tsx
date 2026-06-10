@@ -9,6 +9,7 @@ import { AudienceToggle } from "@/components/tool/AudienceToggle";
 import { BookmarkButton } from "@/components/tool/BookmarkButton";
 import { RatingDisplay } from "@/components/tool/RatingDisplay";
 import { RatingInput } from "@/components/tool/RatingInput";
+import { ReviewsList } from "@/components/tool/ReviewsList";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -257,6 +258,9 @@ export default function ToolLayout() {
           onOpenChange={setRatingOpen}
         />
       )}
+
+      {/* User reviews */}
+      <ReviewsList toolId={tool.id} />
 
       {/* Tab nav + audience toggle */}
       <div className="flex items-center justify-between border-b border-border pb-0">

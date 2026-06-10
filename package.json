@@ -12,7 +12,9 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --local > ./app/types/database.ts",
-    "db:seed": "npx tsx scripts/seed.ts"
+    "db:seed": "npx tsx scripts/seed.ts",
+    "db:seed-bulk": "npx tsx scripts/seed-bulk.ts",
+    "db:discover": "npx tsx scripts/discover-tools.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

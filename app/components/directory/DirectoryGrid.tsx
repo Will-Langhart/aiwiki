@@ -12,10 +12,11 @@ interface Tool {
   api_available?: boolean;
   open_source?: boolean;
   avg_stars?: number | null;
-  rating_count?: number;
+  rating_count?: number | null;
   category_name?: string | null;
   category_slug?: string | null;
   has_free_tier?: boolean;
+  is_featured?: boolean;
 }
 
 interface DirectoryGridProps {

@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router";
 import { Moon, Sun, Search, Menu, X, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -271,49 +271,55 @@ function Nav() {
 function Footer() {
   return (
     <footer className="border-t border-border mt-auto text-sm text-text-muted">
-      <div className="container py-10">
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-8">
+      <div className="container py-5">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Brand */}
-          <div className="space-y-2 max-w-xs">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
-              >
-                <Sparkles size={12} className="text-white" />
-              </div>
-              <span className="font-semibold text-text">AI Wiki</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
+            >
+              <Sparkles size={10} className="text-white" />
             </div>
-            <p className="text-xs text-text-subtle leading-relaxed">
-              Community-curated directory of AI tools. Discover, compare, and find the right tool for every workflow.
-            </p>
+            <span className="text-xs font-semibold text-text">AI Wiki</span>
+            <span className="text-text-subtle/40 text-xs">·</span>
+            <p className="text-xs text-text-subtle">Community-curated AI tool directory</p>
           </div>
 
-          {/* Links */}
-          <div className="flex flex-col sm:flex-row gap-8">
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold text-text-subtle uppercase tracking-widest">Explore</p>
-              <div className="space-y-1.5">
-                <Link to="/tools" className="block hover:text-text transition-colors">Browse tools</Link>
-                <Link to="/compare" className="block hover:text-text transition-colors">Compare</Link>
-                <Link to="/chat" className="block hover:text-text transition-colors">Ask AI Wiki</Link>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold text-text-subtle uppercase tracking-widest">Contribute</p>
-              <div className="space-y-1.5">
-                <Link to="/submit" className="block hover:text-text transition-colors">Submit a tool</Link>
-              </div>
-            </div>
+          {/* Links + copyright */}
+          <div className="flex items-center gap-5 text-xs text-text-muted">
+            <Link to="/tools" className="hover:text-text transition-colors">Browse</Link>
+            <Link to="/compare" className="hover:text-text transition-colors">Compare</Link>
+            <Link to="/chat" className="hover:text-text transition-colors">Ask AI</Link>
+            <Link to="/submit" className="hover:text-text transition-colors">Submit</Link>
+            <span className="text-text-subtle/40">·</span>
+            <span className="text-text-subtle">© {new Date().getFullYear()} AI Wiki</span>
           </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="border-t border-border/60 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-text-subtle">© {new Date().getFullYear()} AI Wiki. Free to use.</p>
         </div>
       </div>
     </footer>
+  );
+}
+
+const NO_FOOTER_ROUTES = ["/chat"];
+
+function AppShellInner() {
+  const { pathname } = useLocation();
+  const showFooter = !NO_FOOTER_ROUTES.includes(pathname);
+
+  return (
+    <div className="h-screen grid grid-rows-[auto_1fr] bg-bg text-text">
+      <Nav />
+      <main className={cn(
+        "min-h-0",
+        showFooter ? "overflow-y-auto" : "relative overflow-hidden"
+      )}>
+        <Outlet />
+        {showFooter && <Footer />}
+      </main>
+      <CompareTray />
+      <AuthModal />
+    </div>
   );
 }
 
@@ -321,17 +327,7 @@ export default function AppShell() {
   return (
     <ThemeProvider>
       <DensityProvider>
-        <div className="min-h-screen flex flex-col bg-bg text-text">
-          <Nav />
-          <main className="flex-1">
-            <Outlet />
-          </main>
-          <Footer />
-          {/* Global compare tray — floats over all pages */}
-          <CompareTray />
-          {/* Global auth modal — opened from anywhere via useAuthModalStore */}
-          <AuthModal />
-        </div>
+        <AppShellInner />
       </DensityProvider>
     </ThemeProvider>
   );

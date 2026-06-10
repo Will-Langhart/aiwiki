@@ -34,6 +34,8 @@ const SUGGESTED_PROMPTS = [
   "Which AI tools have a generous free tier?",
 ];
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
@@ -100,19 +102,117 @@ function AssistantBubble({
   );
 }
 
-export function ChatInterface() {
+// ── Loading skeleton while fetching a historical session ──────────────────────
+
+function HistorySkeleton() {
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 animate-pulse">
+      <div className="flex justify-end">
+        <div className="h-10 w-48 bg-accent/20 rounded-2xl rounded-tr-sm" />
+      </div>
+      <div className="flex gap-3 items-start">
+        <div className="w-7 h-7 rounded-full bg-surface-2 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-surface-2 rounded w-full" />
+          <div className="h-4 bg-surface-2 rounded w-4/5" />
+          <div className="h-4 bg-surface-2 rounded w-2/3" />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div className="h-10 w-64 bg-accent/20 rounded-2xl rounded-tr-sm" />
+      </div>
+      <div className="flex gap-3 items-start">
+        <div className="w-7 h-7 rounded-full bg-surface-2 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-surface-2 rounded w-full" />
+          <div className="h-4 bg-surface-2 rounded w-3/5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+interface ChatInterfaceProps {
+  /** Session to load on mount. Null = fresh conversation. */
+  sessionId: string | null;
+  /** Called when a new session is created via the first message send. */
+  onSessionChange?: (id: string) => void;
+}
+
+export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: ChatInterfaceProps) {
   const { user } = useCurrentUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
   const [sending, setSending] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
+  // ── Load historical session on mount ───────────────────────────────────────
+  useEffect(() => {
+    if (!initialSessionId) return;
+
+    let cancelled = false;
+    setLoadingHistory(true);
+
+    (async () => {
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("id, role, content, tool_citations, created_at")
+        .eq("session_id", initialSessionId)
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      // Collect all tool IDs cited across messages
+      const allToolIds = new Set<string>();
+      for (const m of msgs ?? []) {
+        for (const tid of (m.tool_citations ?? []) as string[]) {
+          allToolIds.add(tid);
+        }
+      }
+
+      // Batch-fetch tool details
+      const toolMap = new Map<string, CitedTool>();
+      if (allToolIds.size > 0) {
+        const { data: tools } = await supabase
+          .from("tools")
+          .select("id, slug, name, tagline, logo_url, pricing_tier")
+          .in("id", [...allToolIds]);
+        for (const t of (tools ?? []) as CitedTool[]) {
+          toolMap.set(t.id, t);
+        }
+      }
+
+      const loaded: Message[] = (msgs ?? []).map((m) => ({
+        id: m.id as string,
+        role: m.role as "user" | "assistant",
+        content: m.content as string,
+        citations: ((m.tool_citations ?? []) as string[])
+          .map((tid) => toolMap.get(tid))
+          .filter((t): t is CitedTool => !!t),
+      }));
+
+      if (!cancelled) {
+        setMessages(loaded);
+        setLoadingHistory(false);
+        setSessionId(initialSessionId);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 0);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSessionId]);
+
+  // ── Auto-resize textarea ────────────────────────────────────────────────────
   // biome-ignore lint/correctness/useExhaustiveDependencies: resize on input change
   useEffect(() => {
     const el = inputRef.current;
@@ -121,7 +221,7 @@ export function ChatInterface() {
     el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }, [input]);
 
-  // Auto-scroll to bottom on new messages
+  // ── Auto-scroll to bottom on new messages ──────────────────────────────────
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   useEffect(() => {
     const el = scrollAreaRef.current;
@@ -130,7 +230,7 @@ export function ChatInterface() {
     if (nearBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Show scroll-to-bottom button when far from bottom
+  // ── Show scroll-to-bottom button ────────────────────────────────────────────
   useEffect(() => {
     const el = scrollAreaRef.current;
     if (!el) return;
@@ -143,6 +243,7 @@ export function ChatInterface() {
 
   const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 
+  // ── Send message ────────────────────────────────────────────────────────────
   const sendMessage = async (text: string) => {
     if (!text.trim() || sending) return;
 
@@ -204,7 +305,9 @@ export function ChatInterface() {
             };
 
             if (event.type === "session" && event.session_id) {
-              setSessionId(event.session_id);
+              const newId = event.session_id;
+              setSessionId(newId);
+              onSessionChange?.(newId);
             } else if (event.type === "content_block_delta" && event.delta?.text) {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -261,11 +364,14 @@ export function ChatInterface() {
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full relative">
       {/* Conversation area */}
       <div ref={scrollAreaRef} className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
+        {loadingHistory ? (
+          <HistorySkeleton />
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-5 px-4 py-12">
             <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
               <Sparkles size={22} className="text-accent" />
@@ -321,7 +427,7 @@ export function ChatInterface() {
         </button>
       )}
 
-      {/* Input area — floating, no divider line */}
+      {/* Input area */}
       <div className="px-4 pb-5 pt-2">
         {!user && (
           <p className="text-xs text-text-subtle text-center mb-2">
@@ -348,13 +454,13 @@ export function ChatInterface() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about AI tools… (Shift+Enter for new line)"
               rows={1}
-              disabled={sending}
+              disabled={sending || loadingHistory}
               className="flex-1 resize-none bg-transparent py-1.5 text-sm text-text placeholder:text-text-subtle focus:outline-none overflow-y-auto min-w-0"
             />
             <button
               type="button"
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || sending}
+              disabled={!input.trim() || sending || loadingHistory}
               className="p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-90 transition-all flex-shrink-0 mb-0.5"
               aria-label="Send message"
             >

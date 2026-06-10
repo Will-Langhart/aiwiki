@@ -30,6 +30,11 @@ interface ToolResult {
   audience_fit: string;
   api_available?: boolean;
   open_source?: boolean;
+  avg_stars?: number | null;
+  rating_count?: number | null;
+  category_name?: string | null;
+  category_slug?: string | null;
+  is_featured?: boolean;
   rank: number;
 }
 

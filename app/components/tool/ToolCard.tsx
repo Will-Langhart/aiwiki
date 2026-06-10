@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Star, GitFork, Zap, GitCompare } from "lucide-react";
+import { Star, GitFork, Zap, GitCompare, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCompareStore } from "@/stores/compare";
@@ -17,9 +17,10 @@ interface ToolCardProps {
     api_available?: boolean;
     open_source?: boolean;
     avg_stars?: number | null;
-    rating_count?: number;
+    rating_count?: number | null;
     category_name?: string | null;
     category_slug?: string | null;
+    is_featured?: boolean;
   };
   dense?: boolean;
   className?: string;
@@ -40,25 +41,29 @@ const PRICING_STYLES: Record<string, string> = {
 };
 
 function ToolLogo({ name, logo_url }: { name: string; logo_url: string | null }) {
-  if (logo_url) {
-    return (
-      <img
-        src={logo_url}
-        alt={`${name} logo`}
-        className="w-11 h-11 rounded-xl object-contain bg-surface-2 p-1 flex-shrink-0 shadow-[var(--shadow-card)]"
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
-          (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
-        }}
-      />
-    );
-  }
   return (
-    <div
-      className="w-11 h-11 rounded-xl flex items-center justify-center text-accent-fg text-sm font-bold flex-shrink-0"
-      style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
-    >
-      {name[0]}
+    <div className="relative flex-shrink-0 w-11 h-11">
+      {logo_url && (
+        <img
+          src={logo_url}
+          alt={`${name} logo`}
+          className="w-11 h-11 rounded-xl object-contain bg-surface-2 p-1 shadow-[var(--shadow-card)]"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+            if (fallback) fallback.style.display = "flex";
+          }}
+        />
+      )}
+      <div
+        className="w-11 h-11 rounded-xl items-center justify-center text-white text-sm font-bold absolute inset-0"
+        style={{
+          display: logo_url ? "none" : "flex",
+          background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+        }}
+      >
+        {name[0]}
+      </div>
     </div>
   );
 }
@@ -71,6 +76,16 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
 
   return (
     <div className={cn("relative group", className)}>
+      {/* Featured ribbon */}
+      {tool.is_featured && (
+        <div
+          className="absolute -top-px -left-px z-10 flex items-center gap-1 px-2 py-0.5 rounded-tl-xl rounded-br-md text-[10px] font-semibold text-white pointer-events-none"
+          style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
+        >
+          <Sparkles size={9} />
+          Sponsored
+        </div>
+      )}
       {/* Compare toggle — top-right corner, visible on hover */}
       <button
         type="button"
