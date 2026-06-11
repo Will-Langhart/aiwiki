@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Mail, Chrome, Github, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, Github, ArrowRight, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase.client";
 import { useAuthModalStore } from "@/stores/auth-modal";
 import {
@@ -74,9 +74,7 @@ export function AuthModal() {
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
-              <Sparkles size={15} className="text-accent" />
-            </div>
+            <img src="/logo.png" alt="AI Wiki" className="w-8 h-8 object-contain" />
             <span className="font-bold text-text">AI Wiki</span>
           </div>
           <DialogTitle className="text-lg font-bold text-text">

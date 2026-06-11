@@ -10,7 +10,7 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   server: {
-    port: 5174,
+    port: Number(process.env.PORT ?? 5174),
   },
   resolve: {
     // Force a single React instance — prevents "Invalid hook call" when CJS

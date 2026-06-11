@@ -1,96 +1,180 @@
-# AI Wiki
+<div align="center">
+  <img src="public/logo.png" alt="AI Wiki logo" width="72" height="72" />
+  <h1>AI Wiki</h1>
+  <p><strong>Community-curated directory and reference site for AI tools.</strong><br/>
+  Browse 200+ tools by category, compare side-by-side, and ask our AI assistant for recommendations.</p>
 
-A community-curated directory and reference site for AI tools. Browse, compare, and learn about 100+ AI products with structured data, audience-aware content, and an AI-powered chat interface that searches and summarizes across the whole catalog.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com)
+  <a href="https://aiwiki-orpin.vercel.app"><img src="https://img.shields.io/badge/live-aiwiki--orpin.vercel.app-blue?style=flat-square" alt="Live site" /></a>
+  <a href="https://github.com/Will-Langhart/aiwiki/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-TBD-lightgrey?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/Will-Langhart/aiwiki/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs welcome" /></a>
+</div>
 
 ---
 
 ## What it is
 
-- **Directory** — 100+ AI tools, organized by category, with structured comparison data
-- **Tool pages** — Overview, docs, and use cases for each tool, with a technical/non-technical audience toggle
-- **Side-by-side compare** — Pick 2–3 tools, see facts and AI-generated TL;DRs lined up
-- **Community submissions** — Anyone can submit a tool; admin review polishes and publishes
-- **Ask AI Wiki** — RAG chat across all published tool content, with source citations
-- **Bookmarks + ratings** — Signed-in users save tools and rate what they've used
+| Feature | Description |
+|---|---|
+| **Directory** | 200+ AI tools with structured data, logos, pricing, and audience tags |
+| **Tool pages** | Overview, docs, and use cases with a technical / non-technical audience toggle |
+| **Compare** | Pick 2–3 tools — structured facts + AI-generated TL;DR side-by-side |
+| **Ask AI Wiki** | RAG chat across all published tool content, with source citations |
+| **Ratings & reviews** | Signed-in users rate tools and leave written reviews |
+| **Bookmarks** | Save tools to your personal list |
+| **Submit a tool** | Community submission wizard → admin review → published |
 
 ## Tech stack
 
-React Router v7 (framework mode) · TypeScript · Vite · Tailwind · shadcn/ui · Supabase (Postgres + Auth + Storage + Edge Functions + Realtime) · Vercel · Resend · Anthropic Claude API · OpenAI embeddings
-
-## Architecture in one paragraph
-
-Most pages are **prerendered at build time** — `react-router.config.ts` reads the published tool list from Supabase and emits static HTML for every tool's overview/docs/use-cases routes plus popular comparison combinations. Dynamic surfaces (search, chat, submission wizard, admin) run as **SPA** in the same app. Database mutations from admins fire **Vercel deploy hooks** to rebuild. AI features (URL-to-draft autofill, compare TL;DR, semantic search, chat) live in **Supabase Edge Functions** with per-feature cost caps tracked in `llm_usage`.
+| Layer | Technology |
+|---|---|
+| Framework | React Router v7 (SPA mode) + TypeScript |
+| Styling | Tailwind v4 + shadcn/ui + CSS design tokens |
+| Database | Supabase (Postgres + RLS + Auth + Storage + Realtime) |
+| AI | Anthropic Claude API (claude-sonnet-4-6) + OpenAI embeddings |
+| Edge Functions | Supabase Deno runtime — chat, compare, discover-tools |
+| Deployment | Vercel |
 
 ## Getting started
 
+### Prerequisites
+
+- Node 20+
+- [Supabase CLI](https://supabase.com/docs/guides/cli)
+- Docker (for local Supabase)
+- An [Anthropic API key](https://console.anthropic.com)
+
+### 1. Clone & install
+
 ```bash
-# 1. Clone and install
-git clone <repo-url> ai-wiki
-cd ai-wiki
+git clone https://github.com/Will-Langhart/aiwiki.git
+cd aiwiki
 npm install
-
-# 2. Set up env
-cp .env.example .env.local
-# Fill in SUPABASE_URL, ANTHROPIC_API_KEY, etc.
-
-# 3. Set up Supabase locally
-supabase start
-supabase db reset                # applies all migrations
-npm run db:seed                  # seeds categories + 14 starter tools
-
-# 4. Run dev
-npm run dev                      # Vite dev server on :5173
-supabase functions serve         # Edge Functions on :54321 (in another terminal)
 ```
 
-Visit `http://localhost:5173`. Sign up at `/auth`, then promote your user to admin via SQL:
+### 2. Environment
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in `.env.local`:
+
+```env
+VITE_SUPABASE_URL=       # from Supabase project settings
+VITE_SUPABASE_ANON_KEY=  # from Supabase project settings
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_URL=
+ANTHROPIC_API_KEY=       # sk-ant-...
+```
+
+### 3. Local Supabase
+
+```bash
+supabase start            # starts local Postgres + Auth + Storage
+supabase db reset         # runs all migrations in supabase/migrations/
+npm run db:seed           # seeds 14 categories + starter tools
+```
+
+### 4. Run
+
+```bash
+npm run dev               # Vite dev server
+supabase functions serve  # Edge Functions (separate terminal)
+```
+
+Open `http://localhost:5173`. To make yourself admin:
 
 ```sql
-update profiles set is_admin = true where username = '<your-username>';
+-- in Supabase Studio → SQL Editor
+update profiles set is_admin = true where username = 'your-username';
 ```
 
 ## Project structure
 
 ```
-app/                  React Router v7 app source
-  routes/             File-based routes
-  components/         UI primitives (shadcn) and domain components
-  lib/                Supabase clients, hooks, utilities
-  styles/             Global CSS + design tokens
+app/
+  routes/           File-based routes (React Router v7)
+  components/       Domain components + shadcn/ui primitives
+    auth/           AuthModal, OAuth buttons
+    chat/           Chat interface + sidebar
+    compare/        Compare tray + table
+    tool/           ToolCard, ratings, reviews, content blocks
+    layout/         AppShell (nav + footer)
+  lib/              Supabase clients, theme, density, utils
+  stores/           Zustand stores (compare tray, auth modal)
+  hooks/            useCurrentUser, etc.
+  styles/           globals.css + tokens.css (design system)
 supabase/
-  migrations/         Database schema (run in order)
-  functions/          Edge Functions (Deno)
-scripts/              Build-time helpers (seed, sitemap)
+  migrations/       Numbered SQL migrations (source of truth)
+  functions/        Edge Functions: chat, compare, discover-tools
+scripts/            Seed, bulk-seed, discover-tools runner
 ```
 
-Full layout in `SPEC.md §13`.
+## Auth — Google & GitHub OAuth setup
 
-## Documentation
+OAuth buttons are built. You just need to wire up the providers in Supabase.
 
-- **`SPEC.md`** — Full product spec, data model, route map, design tokens, phased build plan. Read this first.
-- **`CLAUDE.md`** — Working instructions if you're using Claude Code in this repo.
-- **`CHANGELOG.md`** — Per-release notes.
+### GitHub OAuth
 
-## Status
+1. Go to **GitHub → Settings → Developer settings → OAuth Apps → New OAuth App**
+2. Fill in:
+   - **Homepage URL**: `https://your-project.supabase.co`
+   - **Authorization callback URL**: `https://your-project.supabase.co/auth/v1/callback`
+3. Copy the **Client ID** and generate a **Client Secret**
+4. In **Supabase Dashboard → Authentication → Providers → GitHub**: paste both, enable it
 
-Pre-launch. Tracking against the phased build plan in `SPEC.md §15`.
+For local dev, also add `http://localhost:5173` to Supabase's **Allowed redirect URLs** (Auth → URL Configuration).
 
-| Phase | Status |
-|---|---|
-| 0 — Foundation | Not started |
-| 1 — Directory + Tool Pages | Not started |
-| 2 — Compare + Bookmarks | Not started |
-| 3 — Submissions Flow | Not started |
-| 4 — Notifications + Ratings | Not started |
-| 5 — AI Features | Not started |
-| 6 — v1.1: Comments + Polish | Not started |
+### Google OAuth
 
-## License
+1. Go to **Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client**
+2. Application type: **Web application**
+3. Add Authorized redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+4. Copy **Client ID** and **Client Secret**
+5. In **Supabase Dashboard → Authentication → Providers → Google**: paste both, enable it
 
-TBD before v1 launch. Likely permissive for the code, with content (tool entries) under a Creative Commons license to encourage contribution and reuse.
+> Both providers are already wired in `app/components/auth/AuthModal.tsx` — no code changes needed.
 
 ## Contributing
 
-Once v1 ships, community submissions happen through the `/submit` flow in the site itself. Code contributions via PR — see `CLAUDE.md` for conventions.
+### Adding or improving tools
+
+The fastest way to contribute is through the **[Submit a tool](https://aiwiki-orpin.vercel.app/submit)** flow on the live site.
+
+### Code contributions
+
+1. Fork the repo and create a branch: `feat/my-feature` or `fix/my-bug`
+2. Follow the conventions in [`CLAUDE.md`](CLAUDE.md) — Biome lint, design tokens, no raw `zinc-*` classes
+3. Open a PR with: what changed, why, and screenshots for any UI changes
+4. PRs that touch `supabase/migrations/` must include the migration SQL in the PR description
+
+### What we'd love help with
+
+- [ ] More tool entries (submit via the site or open a PR against the seed data)
+- [ ] Tool screenshots / better logo coverage
+- [ ] Playwright E2E tests for the compare and chat flows
+- [ ] i18n / translations
+- [ ] Dark mode refinements and accessibility audit
+
+### Code style quick-ref
+
+| Rule | Detail |
+|---|---|
+| Formatter | Biome (`npm run format`) |
+| Linter | Biome (`npm run lint`) |
+| Imports | `@/` alias for everything under `app/` |
+| Styling | Design tokens only — `bg-bg`, `text-text-muted`, `border-border` |
+| State | URL params → React state → Zustand (in that order) |
+| Data fetching | React Router loaders (server) or TanStack Query (client) |
+
+## Documentation
+
+| File | Purpose |
+|---|---|
+| [`SPEC.md`](SPEC.md) | Full product spec — data model, routes, design tokens, build phases |
+| [`CLAUDE.md`](CLAUDE.md) | Working instructions for Claude Code in this repo |
+| [`CHANGELOG.md`](CHANGELOG.md) | Per-release notes |
+
+## License
+
+TBD before v1 launch. Code will be permissive (MIT or Apache-2.0); tool entries will be Creative Commons to encourage reuse.
