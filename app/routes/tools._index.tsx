@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 import type { Route } from "./+types/tools._index";
 import { supabase } from "@/lib/supabase.client";
 import { DirectoryGrid } from "@/components/directory/DirectoryGrid";
-import { FilterSidebar } from "@/components/directory/FilterSidebar";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { FilterBar } from "@/components/directory/FilterBar";
 import { Input } from "@/components/ui/input";
-import { SlidersHorizontal, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 export function meta(_: Route.MetaArgs) {
@@ -86,7 +84,6 @@ export default function ToolsIndex() {
   const oss = searchParams.get("oss") === "true" ? true : null;
   const q = searchParams.get("q") ?? "";
 
-  // Sync debounced input → URL (must be in useEffect, not during render)
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally omit searchParams/setSearchParams — adding them causes infinite re-render
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -98,7 +95,7 @@ export default function ToolsIndex() {
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
-  }, [debouncedInput]); // only fire when debounced value changes
+  }, [debouncedInput]);
 
   const { data: categories = [], isLoading: catsLoading } = useQuery({
     queryKey: ["categories"],
@@ -112,28 +109,31 @@ export default function ToolsIndex() {
     staleTime: 60 * 1000,
   });
 
-  const hasActiveFilters =
-    cats.length > 0 || pricing.length > 0 || audiences.length > 0 || api || oss;
-
   return (
     <div className="container py-8">
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-text">AI Tools Directory</h1>
-        <p className="text-text-muted mt-1">
-          Discover and compare {tools.length > 0 ? `${tools.length} ` : ""}AI tools for every workflow.
+      <div className="mb-7 relative">
+        <div
+          className="absolute -left-6 top-0 w-72 h-24 pointer-events-none opacity-[0.15]"
+          style={{ background: "radial-gradient(ellipse at left top, var(--accent), transparent 65%)" }}
+        />
+        <h1 className="text-3xl font-bold text-text tracking-tight relative">
+          AI Tools Directory
+        </h1>
+        <p className="text-text-muted mt-1.5 relative">
+          Community-curated. Every workflow covered.
         </p>
       </div>
 
       {/* Search bar */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+      <div className="relative mb-5">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={15} />
         <Input
           type="search"
-          placeholder="Search tools…"
+          placeholder="Search tools, categories, use cases…"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          className="pl-9 pr-9"
+          className="pl-9 pr-9 h-10 bg-surface border-border focus:border-accent/50 transition-colors"
         />
         {inputValue && (
           <button
@@ -144,50 +144,24 @@ export default function ToolsIndex() {
               next.delete("q");
               setSearchParams(next, { replace: true });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
           >
             <X size={14} />
           </button>
         )}
       </div>
 
-      <div className="flex gap-8">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:block w-52 flex-shrink-0">
-          {!catsLoading && (
-            <FilterSidebar categories={categories} />
-          )}
-        </div>
+      {/* Filter bar */}
+      {!catsLoading && (
+        <FilterBar
+          categories={categories}
+          resultCount={tools.length}
+          loading={toolsLoading}
+        />
+      )}
 
-        {/* Mobile filter sheet */}
-        <div className="lg:hidden mb-4">
-          <Sheet>
-            <SheetTrigger
-              render={
-                <Button variant="outline" size="sm" className="gap-2">
-                  <SlidersHorizontal size={14} />
-                  Filters
-                  {hasActiveFilters && (
-                    <span className="ml-1 w-4 h-4 rounded-full bg-accent text-accent-fg text-xs flex items-center justify-center">
-                      {cats.length + pricing.length + audiences.length + (api ? 1 : 0) + (oss ? 1 : 0)}
-                    </span>
-                  )}
-                </Button>
-              }
-            />
-            <SheetContent side="left" className="w-72 overflow-y-auto">
-              <div className="pt-6">
-                <FilterSidebar categories={categories} />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 min-w-0">
-          <DirectoryGrid tools={tools} loading={toolsLoading} />
-        </div>
-      </div>
+      {/* Grid */}
+      <DirectoryGrid tools={tools} loading={toolsLoading} />
     </div>
   );
 }

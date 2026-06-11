@@ -114,7 +114,7 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
         className={cn(
           "block rounded-xl border border-border bg-surface",
           "shadow-[var(--shadow-card)]",
-          "hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/25",
+          "hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/40",
           "transition-all duration-200",
           dense ? "p-3" : "p-4",
         )}
