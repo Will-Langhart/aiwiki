@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router";
-import { Moon, Sun, Search, Menu, X } from "lucide-react";
+import { Moon, Sun, Search, Menu, X, Github } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { DensityProvider } from "@/lib/density";
@@ -210,6 +210,15 @@ function Nav() {
             >
               <Search size={18} />
             </button>
+            <a
+              href="https://github.com/Will-Langhart/aiwiki"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+              aria-label="View on GitHub"
+            >
+              <Github size={18} />
+            </a>
             <ThemeToggle />
             {user && <NotificationBell userId={user.id} />}
             <Link
