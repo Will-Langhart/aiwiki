@@ -20,28 +20,9 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 // Updated 2026-06-10 after extensive internet research across all 14 categories.
 // The edge function upserts by slug so re-running is safe.
 const TOOL_URLS = [
-  // ── Chat & General AI ───────────────────────────────────────────────────────
-  "https://deepseek.com",
-  "https://poe.com",
-  "https://you.com",
-  "https://pi.ai",
-  "https://copilot.microsoft.com",
-  "https://character.ai",
-  "https://heypi.com",
-  "https://kore.ai",
-
-  // ── Coding & Development ─────────────────────────────────────────────────────
-  "https://codeium.com/windsurf",
-  "https://lovable.dev",
-  "https://bolt.new",
-  "https://v0.dev",
-  "https://coderabbit.ai",
-  "https://aider.chat",
-  "https://aws.amazon.com/q/developer",
-  "https://continue.dev",
-  "https://cline.bot",
-  "https://phind.com",
-  "https://sourcegraph.com/cody",
+  // ── Coding & Development (resuming from batch 19) ──────────────────────────
+  // deepseek,poe,you,pi,copilot,character,heypi,kore,windsurf,lovable,bolt,
+  // v0,coderabbit,aider,aws-q,continue,cline,phind,sourcegraph already done
   "https://pieces.app",
   "https://replit.com",
 
