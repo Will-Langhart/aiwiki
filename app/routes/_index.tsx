@@ -66,11 +66,11 @@ async function fetchSiteStats(): Promise<SiteStats> {
 // ── Static data ───────────────────────────────────────────────────────────────
 const categories = [
   { slug: "chat-assistants",   label: "Chat Assistants",      icon: BrainCircuit,  color: "text-blue-500" },
-  { slug: "coding",            label: "Coding & Dev",         icon: Code2,         color: "text-indigo-500" },
+  { slug: "coding",            label: "Coding & Dev",         icon: Code2,         color: "text-blue-500" },
   { slug: "image-generation",  label: "Image Generation",     icon: Image,         color: "text-pink-500" },
   { slug: "video",             label: "Video Generation",     icon: Video,         color: "text-rose-500" },
   { slug: "audio-music",       label: "Audio & Music",        icon: Headphones,    color: "text-emerald-500" },
-  { slug: "writing",           label: "Writing & Editing",    icon: PenLine,       color: "text-violet-500" },
+  { slug: "writing",           label: "Writing & Editing",    icon: PenLine,       color: "text-sky-500" },
   { slug: "search-research",   label: "Search & Research",    icon: BookOpen,      color: "text-sky-500" },
   { slug: "presentations-docs",label: "Presentations & Docs", icon: Presentation,  color: "text-orange-500" },
   { slug: "design",            label: "Design",               icon: Sparkles,      color: "text-fuchsia-500" },
