@@ -116,8 +116,8 @@ export function FilterBar({ categories, resultCount, loading }: FilterBarProps) 
 
   return (
     <div className="space-y-2 mb-6">
-      {/* Category pills — scrolls on mobile, wraps on desktop */}
-      <div className="flex gap-1.5 flex-nowrap overflow-x-auto lg:flex-wrap pb-0.5 -mb-0.5 [&::-webkit-scrollbar]:hidden">
+      {/* Category pills */}
+      <div className="flex gap-1.5 flex-wrap">
         <Pill
           active={activeCats.length === 0}
           onClick={() => {
