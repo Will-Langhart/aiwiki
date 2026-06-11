@@ -1,13 +1,13 @@
 /**
  * Calls the discover-tools edge function with a curated list of AI tool URLs.
  * Run via:  npx tsx scripts/discover-tools.ts
- * Requires: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + SUPABASE_ANON_KEY in .env.local
+ * Requires: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env.local
  *
  * The edge function scrapes each URL, extracts structured data with Claude,
  * and upserts tools directly into the database as published.
  *
  * Batches of 5 to stay within the $5/day cost cap and avoid timeouts.
- * Estimated cost: ~$0.02–0.05 per tool → ~$2–5 for 100 tools.
+ * Estimated cost: ~$0.02–0.05 per tool.
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -17,136 +17,170 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
 // ─── Curated list of high-quality AI tool URLs ────────────────────────────────
-// These are in addition to the ~114 tools already seeded via seed.ts + seed-bulk.ts.
-// Remove any URLs that are already in the database to avoid redundant scraping.
+// Updated 2026-06-10 after extensive internet research across all 14 categories.
+// The edge function upserts by slug so re-running is safe.
 const TOOL_URLS = [
-  // Chat & General AI
+  // ── Chat & General AI ───────────────────────────────────────────────────────
+  "https://deepseek.com",
+  "https://poe.com",
+  "https://you.com",
+  "https://pi.ai",
+  "https://copilot.microsoft.com",
   "https://character.ai",
   "https://heypi.com",
-  "https://claude.ai/code", // Claude Code specifically
+  "https://kore.ai",
 
-  // Coding
-  "https://cline.bot",
+  // ── Coding & Development ─────────────────────────────────────────────────────
+  "https://codeium.com/windsurf",
+  "https://lovable.dev",
+  "https://bolt.new",
+  "https://v0.dev",
+  "https://coderabbit.ai",
+  "https://aider.chat",
+  "https://aws.amazon.com/q/developer",
   "https://continue.dev",
-  "https://replit.com",
-  "https://githubnext.com",
+  "https://cline.bot",
   "https://phind.com",
   "https://sourcegraph.com/cody",
   "https://pieces.app",
-  "https://codestral.mistral.ai",
+  "https://replit.com",
 
-  // Image Generation
+  // ── Image Generation ──────────────────────────────────────────────────────────
+  "https://ideogram.ai",
+  "https://leonardo.ai",
+  "https://fal.ai",
+  "https://civitai.com",
   "https://getimg.ai",
-  "https://bing.com/create",
+  "https://krea.ai",
   "https://clipdrop.co",
   "https://photoroom.com",
-  "https://remove.bg",
-  "https://krea.ai",
-  "https://fal.ai",
   "https://tensor.art",
 
-  // Video
-  "https://invideo.io",
+  // ── Video Generation ──────────────────────────────────────────────────────────
+  "https://opusclip.com",
+  "https://descript.com",
+  "https://loom.com",
+  "https://heygen.com",
   "https://pictory.ai",
-  "https://synthesia.io/features/ai-video-generator",
   "https://veed.io",
   "https://captions.ai",
-  "https://opus.pro",
+  "https://invideo.io",
   "https://wondershare.com/filmora",
 
-  // Audio
+  // ── Audio & Music ─────────────────────────────────────────────────────────────
+  "https://fish.audio",
+  "https://cartesia.ai",
+  "https://deepgram.com",
+  "https://rev.ai",
+  "https://assemblyai.com",
   "https://aiva.ai",
   "https://soundraw.io",
-  "https://assemblyai.com",
-  "https://adobe.com/products/podcast.html",
-  "https://podcast.adobe.com",
   "https://resemble.ai",
   "https://wellsaidlabs.com",
+  "https://notebooklm.google.com",
 
-  // Writing
+  // ── Writing & Editing ─────────────────────────────────────────────────────────
+  "https://writesonic.com",
+  "https://hemingwayapp.com",
+  "https://frase.io",
+  "https://anyword.com",
   "https://wordtune.com",
-  "https://hyperwriteai.com",
   "https://sudowrite.com",
-  "https://koala.sh",
   "https://jenni.ai",
-  "https://essay.ai",
+  "https://hyperwriteai.com",
   "https://longshot.ai",
 
-  // Research & Search
+  // ── Search & Research ─────────────────────────────────────────────────────────
+  "https://consensus.app",
+  "https://elicit.com",
+  "https://exa.ai",
   "https://scispace.com",
   "https://scite.ai",
-  "https://semantic-scholar.org",
-  "https://iris.ai",
   "https://undermind.ai",
   "https://sider.ai",
-  "https://andi.ai",
 
-  // Productivity
+  // ── Presentations & Docs ──────────────────────────────────────────────────────
+  "https://beautiful.ai",
+  "https://slidesai.io",
+  "https://tome.app",
+
+  // ── Design (UI/UX) ─────────────────────────────────────────────────────────────
+  "https://usegalileo.ai",
+  "https://relume.io",
+  "https://uizard.io",
+  "https://spline.design",
+  "https://tldraw.com",
+  "https://locofy.ai",
+  "https://magician.design",
+  "https://vizcom.ai",
+
+  // ── Data & Analytics ──────────────────────────────────────────────────────────
+  "https://thoughtspot.com",
+  "https://querio.ai",
+  "https://tellius.com",
+  "https://akkio.com",
+  "https://pecan.ai",
+  "https://rows.com",
+  "https://seek.ai",
+
+  // ── Automation & Agents ──────────────────────────────────────────────────────
+  "https://n8n.io",
+  "https://workato.com",
+  "https://activepieces.com",
+  "https://relay.app",
+  "https://relevanceai.com",
+  "https://gumloop.com",
+  "https://voiceflow.com",
+  "https://anythingllm.com",
+  "https://langchain.com",
+
+  // ── AI Infrastructure ─────────────────────────────────────────────────────────
+  "https://together.ai",
+  "https://groq.com",
+  "https://fireworks.ai",
+  "https://modal.com",
+  "https://baseten.co",
+  "https://anyscale.com",
+  "https://portkey.ai",
+  "https://helicone.ai",
+  "https://llamaindex.ai",
+
+  // ── Voice & Speech ────────────────────────────────────────────────────────────
+  "https://speechmatics.com",
+  "https://livekit.io",
+  "https://symbl.ai",
+
+  // ── Marketing & Sales ─────────────────────────────────────────────────────────
+  "https://semrush.com",
+  "https://ahrefs.com",
+  "https://klaviyo.com",
+  "https://apollo.io",
+  "https://smartlead.ai",
+  "https://lemlist.com",
+  "https://gong.io",
+  "https://intercom.com",
+  "https://drift.com",
+  "https://surfer.seo",
+
+  // ── Productivity & Notes ──────────────────────────────────────────────────────
   "https://mem.ai",
   "https://taskade.com",
   "https://reflect.app",
   "https://audiopen.ai",
-  "https://rewind.ai",
-  "https://magical.so",
   "https://reclaim.ai",
-  "https://motion.la",
+  "https://magical.so",
+  "https://otter.ai",
 
-  // Design
-  "https://locofy.ai",
-  "https://galileoai.io",
-  "https://usegalileo.ai",
-  "https://magician.design",
-  "https://alpaca.art",
-  "https://vizcom.ai",
-  "https://diagram.com",
-  "https://photoai.com",
+  // ── Open Source / Local LLMs ─────────────────────────────────────────────────
+  "https://ollama.ai",
+  "https://lmstudio.ai",
+  "https://jan.ai",
+  "https://openwebui.com",
 
-  // Data & Analytics
-  "https://akkio.com",
-  "https://pecan.ai",
-  "https://tellius.com",
-  "https://seek.ai",
-  "https://powerdrill.ai",
-  "https://rows.com",
-  "https://luminary.app",
-
-  // Automation
-  "https://relay.app",
-  "https://retool.com",
-  "https://relevanceai.com",
-  "https://gumloop.com",
-  "https://activepieces.com",
-  "https://mindstudio.ai",
-  "https://voiceflow.com",
-
-  // Infrastructure
-  "https://fireworks.ai",
-  "https://anyscale.com",
-  "https://modal.com",
-  "https://banana.dev",
-  "https://baseten.co",
-  "https://llamaindex.ai",
-  "https://langsmith.dev",
-  "https://portkey.ai",
-  "https://helicone.ai",
-
-  // Voice
-  "https://speechmatics.com",
-  "https://rev.ai",
-  "https://verbit.ai",
-  "https://symbl.ai",
-  "https://livekit.io",
-
-  // Marketing & Sales
-  "https://smartlead.ai",
-  "https://apollo.io",
-  "https://lemlist.com",
-  "https://rocketreach.co",
-  "https://amplemarket.com",
-  "https://drift.com",
-  "https://intercom.com",
-  "https://gong.io",
-  "https://chorus.ai",
+  // ── Customer Service ──────────────────────────────────────────────────────────
+  "https://ada.support",
+  "https://tidio.com",
+  "https://gorgias.com",
 ];
 
 function sleep(ms: number) {
@@ -154,7 +188,7 @@ function sleep(ms: number) {
 }
 
 async function runBatch(urls: string[], batchNum: number, total: number) {
-  console.log(`\n📦 Batch ${batchNum}: processing ${urls.length} URLs...`);
+  console.log(`\n📦 Batch ${batchNum}/${total}: processing ${urls.length} URLs...`);
 
   const res = await fetch(
     `${SUPABASE_URL}/functions/v1/discover-tools`,
@@ -189,21 +223,24 @@ async function runBatch(urls: string[], batchNum: number, total: number) {
 }
 
 async function main() {
-  const BATCH_SIZE = 5;
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+    process.exit(1);
+  }
+
+  const BATCH_SIZE = 1;
   const batches: string[][] = [];
   for (let i = 0; i < TOOL_URLS.length; i += BATCH_SIZE) {
     batches.push(TOOL_URLS.slice(i, i + BATCH_SIZE));
   }
 
   console.log(`🤖 Discovering ${TOOL_URLS.length} AI tools in ${batches.length} batches of ${BATCH_SIZE}`);
-  console.log(`💰 Estimated cost: $${(TOOL_URLS.length * 0.035).toFixed(2)}–$${(TOOL_URLS.length * 0.06).toFixed(2)}`);
-  console.log(`⚠️  Make sure the discover-tools edge function is deployed first.`);
-  console.log(`   supabase functions deploy discover-tools\n`);
+  console.log(`💰 Estimated cost: $${(TOOL_URLS.length * 0.03).toFixed(2)}–$${(TOOL_URLS.length * 0.06).toFixed(2)}`);
+  console.log();
 
   for (let i = 0; i < batches.length; i++) {
     await runBatch(batches[i], i + 1, batches.length);
     if (i < batches.length - 1) {
-      // 3-second pause between batches to avoid overwhelming the edge function
       await sleep(3000);
     }
   }
