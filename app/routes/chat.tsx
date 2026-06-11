@@ -18,7 +18,7 @@ export default function ChatPage() {
 
   // Track which session is active (null = fresh/new chat)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSessionChange = (id: string) => {
     setActiveSessionId(id);

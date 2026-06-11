@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, RotateCcw, ArrowDown } from "lucide-react";
+import { Send, RotateCcw, ArrowDown } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
@@ -64,8 +64,8 @@ function AssistantBubble({
 
   return (
     <div className="flex gap-3 items-start">
-      <div className="w-7 h-7 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Sparkles size={13} className="text-accent" />
+      <div className="w-7 h-7 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5 p-1">
+        <img src="/logo.png" alt="AI Wiki" className="w-full h-full object-contain" />
       </div>
       <div className="flex-1 min-w-0 space-y-3">
         {!content && streaming ? (
@@ -373,8 +373,8 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
           <HistorySkeleton />
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-5 px-4 py-12">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
-              <Sparkles size={22} className="text-accent" />
+            <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center p-2.5">
+              <img src="/logo.png" alt="AI Wiki" className="w-full h-full object-contain" />
             </div>
             <div className="space-y-1.5">
               <h2 className="text-xl font-bold text-text">Ask AI Wiki</h2>
