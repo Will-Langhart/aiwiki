@@ -2,11 +2,5 @@
   "framework": "react-router",
   "buildCommand": "npm run build",
   "outputDirectory": "build/client",
-  "installCommand": "npm install",
-  "crons": [
-    {
-      "path": "/api/cron/regenerate-embeddings",
-      "schedule": "0 4 * * 0"
-    }
-  ]
+  "installCommand": "npm install"
 }
