@@ -65,7 +65,7 @@ async function fetchTools(params: {
     audiences: params.audiences.length > 0 ? params.audiences : undefined,
     has_api: params.api ?? undefined,
     open_source: params.oss ?? undefined,
-    page_size: 60,
+    page_size: 500,
     page_offset: 0,
   });
   if (error) throw new Error(error.message);
