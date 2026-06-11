@@ -31,6 +31,8 @@ export function meta(_: Route.MetaArgs) {
 
 export function links() {
   return [
+    { rel: "icon", type: "image/png", href: "/logo.png" },
+    { rel: "apple-touch-icon", href: "/logo.png" },
     { rel: "preconnect", href: "https://fonts.googleapis.com" },
     {
       rel: "preconnect",
