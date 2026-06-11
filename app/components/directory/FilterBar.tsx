@@ -144,30 +144,34 @@ export function FilterBar({ categories, resultCount, loading }: FilterBarProps) 
       </div>
 
       {/* Pricing + features + count */}
-      <div className="flex items-center flex-wrap gap-1.5">
-        {PRICING_OPTIONS.map((opt) => (
-          <Pill
-            key={opt.value}
-            active={activePricing.includes(opt.value)}
-            onClick={() => toggleMulti("pricing", opt.value, activePricing)}
-          >
-            {opt.label}
+      <div className="flex items-center justify-between gap-3">
+        {/* Left: filter pills */}
+        <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+          {PRICING_OPTIONS.map((opt) => (
+            <Pill
+              key={opt.value}
+              active={activePricing.includes(opt.value)}
+              onClick={() => toggleMulti("pricing", opt.value, activePricing)}
+            >
+              {opt.label}
+            </Pill>
+          ))}
+
+          <div className="w-px h-4 bg-border/60 mx-0.5 self-center" />
+
+          <Pill active={hasApi} onClick={() => toggleBool("api", hasApi)}>
+            <Zap size={10} />
+            Has API
           </Pill>
-        ))}
 
-        <div className="w-px h-4 bg-border/60 mx-0.5 self-center" />
+          <Pill active={hasOss} onClick={() => toggleBool("oss", hasOss)}>
+            <GitFork size={10} />
+            Open Source
+          </Pill>
+        </div>
 
-        <Pill active={hasApi} onClick={() => toggleBool("api", hasApi)}>
-          <Zap size={10} />
-          Has API
-        </Pill>
-
-        <Pill active={hasOss} onClick={() => toggleBool("oss", hasOss)}>
-          <GitFork size={10} />
-          Open Source
-        </Pill>
-
-        <div className="ml-auto flex items-center gap-3">
+        {/* Right: count + clear — never wraps */}
+        <div className="flex items-center gap-3 shrink-0">
           {hasFilters && (
             <button
               type="button"

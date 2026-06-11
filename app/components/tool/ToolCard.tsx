@@ -40,14 +40,16 @@ const PRICING_STYLES: Record<string, string> = {
   enterprise: "bg-surface-2 text-text-muted border-border",
 };
 
-function ToolLogo({ name, logo_url }: { name: string; logo_url: string | null }) {
+function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: string | null; size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "w-8 h-8" : "w-11 h-11";
+  const text = size === "sm" ? "text-xs" : "text-sm";
   return (
-    <div className="relative flex-shrink-0 w-11 h-11">
+    <div className={`relative flex-shrink-0 ${dim}`}>
       {logo_url && (
         <img
           src={logo_url}
           alt={`${name} logo`}
-          className="w-11 h-11 rounded-xl object-contain bg-surface-2 p-1 shadow-[var(--shadow-card)]"
+          className={`${dim} rounded-lg object-contain bg-surface-2 p-0.5 shadow-[var(--shadow-card)]`}
           onError={(e) => {
             e.currentTarget.style.display = "none";
             const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -56,7 +58,7 @@ function ToolLogo({ name, logo_url }: { name: string; logo_url: string | null })
         />
       )}
       <div
-        className="w-11 h-11 rounded-xl items-center justify-center text-white text-sm font-bold absolute inset-0"
+        className={`${dim} rounded-lg items-center justify-center text-white ${text} font-bold absolute inset-0`}
         style={{
           display: logo_url ? "none" : "flex",
           background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
@@ -115,66 +117,61 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
           "block rounded-xl border border-border bg-surface",
           "shadow-[var(--shadow-card)]",
           "hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/40",
-          "transition-all duration-200",
-          dense ? "p-3" : "p-4",
+          "transition-all duration-200 p-3",
         )}
       >
         {/* Header row */}
-        <div className="flex items-start gap-3 mb-2.5">
-          <ToolLogo name={tool.name} logo_url={tool.logo_url} />
+        <div className="flex items-start gap-2 mb-2">
+          <ToolLogo name={tool.name} logo_url={tool.logo_url} size="sm" />
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className={cn(
-                "font-semibold text-text group-hover:text-accent transition-colors leading-tight",
-                dense ? "text-sm" : "text-base"
-              )}>
+              <h3 className="text-sm font-semibold text-text group-hover:text-accent transition-colors leading-tight truncate">
                 {tool.name}
               </h3>
               {hasFreeTier && (
-                <Badge className="text-[10px] py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0 font-medium">
+                <Badge className="text-[10px] py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0 font-medium shrink-0">
                   Free
                 </Badge>
               )}
             </div>
             {tool.category_name && (
-              <p className="text-xs text-text-subtle mt-0.5">{tool.category_name}</p>
+              <p className="text-[11px] text-text-subtle mt-0.5 truncate">{tool.category_name}</p>
             )}
           </div>
         </div>
 
         {/* Tagline */}
-        <p className={cn("text-text-muted leading-snug line-clamp-2", dense ? "text-xs" : "text-sm")}>
+        <p className="text-xs text-text-muted leading-snug line-clamp-2">
           {tool.tagline}
         </p>
 
         {/* Footer row */}
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
           <span className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border",
+            "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
             PRICING_STYLES[tool.pricing_tier] ?? "bg-surface-2 text-text-muted border-border"
           )}>
             {PRICING_LABELS[tool.pricing_tier] ?? tool.pricing_tier}
           </span>
 
           {tool.api_available && (
-            <span className="flex items-center gap-0.5 text-xs text-text-subtle">
-              <Zap size={10} className="text-accent" />
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <Zap size={9} className="text-accent" />
               API
             </span>
           )}
 
           {tool.open_source && (
-            <span className="flex items-center gap-0.5 text-xs text-text-subtle">
-              <GitFork size={10} />
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <GitFork size={9} />
               OSS
             </span>
           )}
 
           {tool.avg_stars != null && tool.avg_stars > 0 && (
-            <span className="flex items-center gap-0.5 text-xs text-text-subtle ml-auto">
-              <Star size={10} className="fill-amber-400 text-amber-400" />
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle ml-auto">
+              <Star size={9} className="fill-amber-400 text-amber-400" />
               {tool.avg_stars.toFixed(1)}
-              {tool.rating_count ? ` (${tool.rating_count})` : ""}
             </span>
           )}
         </div>

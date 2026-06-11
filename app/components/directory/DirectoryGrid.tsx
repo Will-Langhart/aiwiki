@@ -48,8 +48,8 @@ function ToolCardSkeleton() {
 export function DirectoryGrid({ tools, loading = false, dense = false }: DirectoryGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {Array.from({ length: 9 }, (_, i) => `skel-${i}`).map((id) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+        {Array.from({ length: 12 }, (_, i) => `skel-${i}`).map((id) => (
           <ToolCardSkeleton key={id} />
         ))}
       </div>
@@ -66,9 +66,9 @@ export function DirectoryGrid({ tools, loading = false, dense = false }: Directo
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
       {tools.map((tool) => (
-        <ToolCard key={tool.id} tool={tool} dense={dense} />
+        <ToolCard key={tool.id} tool={tool} dense />
       ))}
     </div>
   );
