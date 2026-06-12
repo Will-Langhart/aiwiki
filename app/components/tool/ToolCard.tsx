@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Star, GitFork, Zap, GitCompare, Sparkles } from "lucide-react";
+import { Star, GitFork, Zap, GitCompare, Sparkles, Users, Github } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCompareStore } from "@/stores/compare";
@@ -12,6 +12,7 @@ interface ToolCardProps {
     tagline: string;
     logo_url: string | null;
     pricing_tier: string;
+    pricing_detail?: string | null;
     has_free_tier?: boolean;
     audience_fit: string;
     api_available?: boolean;
@@ -21,6 +22,9 @@ interface ToolCardProps {
     category_name?: string | null;
     category_slug?: string | null;
     is_featured?: boolean;
+    github_stars?: number | null;
+    integrations?: string[] | null;
+    traffic_tier?: string | null;
   };
   dense?: boolean;
   className?: string;
@@ -39,6 +43,18 @@ const PRICING_STYLES: Record<string, string> = {
   paid: "bg-surface-2 text-text-muted border-border",
   enterprise: "bg-surface-2 text-text-muted border-border",
 };
+
+const TRAFFIC_LABELS: Record<string, string> = {
+  small: "Niche",
+  medium: "Growing",
+  large: "Popular",
+  xlarge: "10M+ users",
+};
+
+function formatStars(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return String(n);
+}
 
 function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: string | null; size?: "sm" | "md" }) {
   const dim = size === "sm" ? "w-8 h-8" : "w-11 h-11";
@@ -75,6 +91,7 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
   const { items, toggle } = useCompareStore();
   const inCompare = items.some((i) => i.id === tool.id);
   const compareDisabled = !inCompare && items.length >= 4;
+  const shownIntegrations = (tool.integrations ?? []).slice(0, 4);
 
   return (
     <div className={cn("relative group", className)}>
@@ -88,7 +105,7 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
           Sponsored
         </div>
       )}
-      {/* Compare toggle — top-right corner, visible on hover */}
+      {/* Compare toggle */}
       <button
         type="button"
         onClick={(e) => {
@@ -141,12 +158,33 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
         </div>
 
         {/* Tagline */}
-        <p className="text-xs text-text-muted leading-snug line-clamp-2">
+        <p className="text-xs text-text-muted leading-snug line-clamp-2 mb-2.5">
           {tool.tagline}
         </p>
 
+        {/* Pricing detail */}
+        {tool.pricing_detail && (
+          <p className="text-[11px] text-text-subtle leading-tight mb-2 line-clamp-1">
+            {tool.pricing_detail}
+          </p>
+        )}
+
+        {/* Integrations */}
+        {shownIntegrations.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2.5">
+            {shownIntegrations.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-surface-2 text-text-subtle border border-border/60"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Footer row */}
-        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className={cn(
             "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
             PRICING_STYLES[tool.pricing_tier] ?? "bg-surface-2 text-text-muted border-border"
@@ -165,6 +203,20 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
             <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
               <GitFork size={9} />
               OSS
+            </span>
+          )}
+
+          {tool.github_stars != null && tool.github_stars > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <Github size={9} />
+              {formatStars(tool.github_stars)}
+            </span>
+          )}
+
+          {tool.traffic_tier && TRAFFIC_LABELS[tool.traffic_tier] && (
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <Users size={9} />
+              {TRAFFIC_LABELS[tool.traffic_tier]}
             </span>
           )}
 

@@ -3,6 +3,7 @@ import {
   BrainCircuit, Code2, ImageIcon, Video, Headphones, PenLine,
   BookOpen, Presentation, Sparkles, BarChart3, Workflow,
   Database, Mic, Megaphone, Zap, GitFork, X, Layers, ListTodo, Cpu, HeadphonesIcon,
+  FlaskConical, Bot, Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,10 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "productivity-notes": ListTodo,
   "open-source-llms": Cpu,
   "customer-service": HeadphonesIcon,
+  "vector-databases": Database,
+  "mlops-training": FlaskConical,
+  "agent-frameworks": Bot,
+  "ai-observability": Activity,
 };
 
 const PRICING_OPTIONS = [

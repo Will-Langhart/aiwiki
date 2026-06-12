@@ -33,6 +33,10 @@ interface ToolResult {
   category_name?: string | null;
   category_slug?: string | null;
   is_featured?: boolean;
+  github_stars?: number | null;
+  pricing_detail?: string | null;
+  integrations?: string[] | null;
+  traffic_tier?: string | null;
   rank: number;
 }
 
