@@ -272,7 +272,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
       if (!res.ok || !res.body) {
         const errJson = await res.text();
         let errMsg = `HTTP ${res.status}`;
-        try { errMsg = JSON.parse(errJson).message ?? errMsg; } catch { /* use status */ }
+        try { errMsg = JSON.parse(errJson).error ?? JSON.parse(errJson).message ?? errMsg; } catch { /* use status */ }
         setMessages((prev) =>
           prev.map((m) => m.id === assistantMsg.id ? { ...m, content: errMsg, streaming: false, error: true } : m)
         );
