@@ -154,9 +154,16 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Capture the session ID that was present at mount time.
+  // History should only load for sessions that existed BEFORE this component
+  // mounted (i.e. the user navigated to an old session). When a new session is
+  // auto-created mid-stream, initialSessionId changes via prop but we must NOT
+  // reload history — that would overwrite the in-flight streaming messages.
+  const sessionIdAtMount = useRef(initialSessionId);
+
   // ── Load historical session on mount ───────────────────────────────────────
   useEffect(() => {
-    if (!initialSessionId) return;
+    if (!sessionIdAtMount.current) return;
 
     let cancelled = false;
     setLoadingHistory(true);
@@ -165,7 +172,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
       const { data: msgs } = await supabase
         .from("chat_messages")
         .select("id, role, content, tool_citations, created_at")
-        .eq("session_id", initialSessionId)
+        .eq("session_id", sessionIdAtMount.current!)
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -202,7 +209,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
       if (!cancelled) {
         setMessages(loaded);
         setLoadingHistory(false);
-        setSessionId(initialSessionId);
+        setSessionId(sessionIdAtMount.current!);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 0);
       }
     })();
@@ -210,7 +217,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
     return () => {
       cancelled = true;
     };
-  }, [initialSessionId]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally runs once on mount; sessionIdAtMount.current is stable
 
   // ── Auto-resize textarea ────────────────────────────────────────────────────
   // biome-ignore lint/correctness/useExhaustiveDependencies: resize on input change
