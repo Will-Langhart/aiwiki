@@ -199,7 +199,7 @@ ${toolContext ? `Available tool context:\n${toolContext}` : "No matching tools f
         ));
 
         const stream = anthropic.messages.stream({
-          model: "claude-sonnet-4-6",
+          model: "claude-opus-4-8",
           max_tokens: 1024,
           system: systemPrompt,
           messages,
@@ -249,7 +249,7 @@ ${toolContext ? `Available tool context:\n${toolContext}` : "No matching tools f
           feature: "chat",
           input_tokens: usage.input_tokens,
           output_tokens: usage.output_tokens,
-          cost_usd: (usage.input_tokens * 3 + usage.output_tokens * 15) / 1_000_000,
+          cost_usd: (usage.input_tokens * 15 + usage.output_tokens * 75) / 1_000_000,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Streaming error";
