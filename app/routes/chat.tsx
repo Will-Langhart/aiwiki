@@ -20,18 +20,26 @@ export default function ChatPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // navigationKey only changes on explicit session navigation (sidebar select / new chat),
+  // NOT when a new session is auto-created mid-stream. Using activeSessionId as the key
+  // would remount ChatInterface when a session ID is first assigned, wiping streaming state.
+  const [navigationKey, setNavigationKey] = useState<string>("new");
+
   const handleSessionChange = (id: string) => {
+    // Session was auto-created — update the tracked ID but do NOT change navigationKey.
+    // Changing navigationKey would remount ChatInterface and erase the in-progress stream.
     setActiveSessionId(id);
-    // Refresh the sidebar list so the new session appears immediately
     qc.invalidateQueries({ queryKey: ["chat-sessions"] });
   };
 
   const handleNewChat = () => {
     setActiveSessionId(null);
+    setNavigationKey(`new-${Date.now()}`);
   };
 
   const handleSelectSession = (id: string) => {
     setActiveSessionId(id);
+    setNavigationKey(id);
   };
 
   return (
@@ -65,13 +73,8 @@ export default function ChatPage() {
           </button>
         )}
 
-        {/*
-          key={activeSessionId ?? "new"} forces a clean remount whenever the
-          active session changes — avoids complex useEffect diffing inside
-          ChatInterface to detect session switches.
-        */}
         <ChatInterface
-          key={activeSessionId ?? "new"}
+          key={navigationKey}
           sessionId={activeSessionId}
           onSessionChange={handleSessionChange}
         />
