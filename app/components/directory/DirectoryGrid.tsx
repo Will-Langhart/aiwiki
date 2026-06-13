@@ -11,6 +11,8 @@ interface Tool {
   audience_fit: string;
   api_available?: boolean;
   open_source?: boolean;
+  self_hostable?: boolean | null;
+  model_provider?: string | null;
   avg_stars?: number | null;
   rating_count?: number | null;
   category_name?: string | null;

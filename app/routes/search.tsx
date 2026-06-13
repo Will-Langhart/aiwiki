@@ -30,6 +30,13 @@ interface SearchResult {
   has_free_tier: boolean;
   api_available: boolean;
   open_source: boolean;
+  self_hostable?: boolean | null;
+  model_provider?: string | null;
+  avg_stars?: number | null;
+  rating_count?: number | null;
+  category_name?: string | null;
+  github_stars?: number | null;
+  traffic_tier?: string | null;
   rank: number;
   source?: "fts" | "vector" | "both";
 }

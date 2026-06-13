@@ -30,6 +30,8 @@ interface CollectionTool {
     audience_fit: string;
     api_available: boolean;
     open_source: boolean;
+    self_hostable: boolean | null;
+    model_provider: string | null;
     avg_stars: number | null;
     rating_count: number | null;
     category_name: string | null;
@@ -54,8 +56,8 @@ async function fetchCollectionTools(collectionId: string): Promise<CollectionToo
       blurb,
       tools (
         id, slug, name, tagline, logo_url, pricing_tier, has_free_tier,
-        audience_fit, api_available, open_source,
-        categories ( name, slug )
+        audience_fit, api_available, open_source, self_hostable, model_provider,
+        categories!primary_category_id ( name, slug )
       )
     `)
     .eq("collection_id", collectionId)
@@ -68,6 +70,7 @@ async function fetchCollectionTools(collectionId: string): Promise<CollectionToo
       id: string; slug: string; name: string; tagline: string;
       logo_url: string | null; pricing_tier: string; has_free_tier: boolean;
       audience_fit: string; api_available: boolean; open_source: boolean;
+      self_hostable: boolean | null; model_provider: string | null;
       categories: { name: string; slug: string } | null;
     };
     return {
@@ -84,6 +87,8 @@ async function fetchCollectionTools(collectionId: string): Promise<CollectionToo
         audience_fit: t.audience_fit,
         api_available: t.api_available,
         open_source: t.open_source,
+        self_hostable: t.self_hostable,
+        model_provider: t.model_provider,
         avg_stars: null,
         rating_count: null,
         category_name: t.categories?.name ?? null,

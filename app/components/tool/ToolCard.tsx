@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Star, GitFork, Zap, GitCompare, Sparkles, Users, Github } from "lucide-react";
+import { Star, GitFork, Zap, GitCompare, Sparkles, Users, Github, Server, Code2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCompareStore } from "@/stores/compare";
@@ -17,6 +17,8 @@ interface ToolCardProps {
     audience_fit: string;
     api_available?: boolean;
     open_source?: boolean;
+    self_hostable?: boolean | null;
+    model_provider?: string | null;
     avg_stars?: number | null;
     rating_count?: number | null;
     category_name?: string | null;
@@ -49,6 +51,12 @@ const TRAFFIC_LABELS: Record<string, string> = {
   medium: "Growing",
   large: "Popular",
   xlarge: "10M+ users",
+};
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  technical: "Dev",
+  non_technical: "No-code",
+  both: "Everyone",
 };
 
 function formatStars(n: number): string {
@@ -192,6 +200,13 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
             {PRICING_LABELS[tool.pricing_tier] ?? tool.pricing_tier}
           </span>
 
+          {tool.audience_fit && AUDIENCE_LABELS[tool.audience_fit] && (
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <Code2 size={9} className="text-accent/70" />
+              {AUDIENCE_LABELS[tool.audience_fit]}
+            </span>
+          )}
+
           {tool.api_available && (
             <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
               <Zap size={9} className="text-accent" />
@@ -203,6 +218,19 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
             <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
               <GitFork size={9} />
               OSS
+            </span>
+          )}
+
+          {tool.self_hostable && (
+            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
+              <Server size={9} />
+              Self-host
+            </span>
+          )}
+
+          {tool.model_provider && (
+            <span className="text-[10px] text-text-subtle truncate max-w-[80px]" title={tool.model_provider}>
+              {tool.model_provider}
             </span>
           )}
 
@@ -224,6 +252,9 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
             <span className="flex items-center gap-0.5 text-[10px] text-text-subtle ml-auto">
               <Star size={9} className="fill-amber-400 text-amber-400" />
               {tool.avg_stars.toFixed(1)}
+              {tool.rating_count != null && tool.rating_count > 0 && (
+                <span className="text-text-subtle/60 ml-0.5">({tool.rating_count})</span>
+              )}
             </span>
           )}
         </div>

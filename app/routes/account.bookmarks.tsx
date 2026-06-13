@@ -18,6 +18,8 @@ interface BookmarkedTool {
   audience_fit: string;
   api_available: boolean;
   open_source: boolean;
+  self_hostable: boolean | null;
+  model_provider: string | null;
   category_name?: string | null;
 }
 
@@ -29,7 +31,7 @@ async function fetchBookmarks(userId: string): Promise<BookmarkedTool[]> {
       tools (
         id, slug, name, tagline, logo_url,
         primary_category_id, pricing_tier, has_free_tier,
-        audience_fit, api_available, open_source
+        audience_fit, api_available, open_source, self_hostable, model_provider
       )
     `)
     .eq("user_id", userId)
