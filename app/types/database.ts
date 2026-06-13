@@ -158,6 +158,84 @@ export type Database = {
           },
         ]
       }
+      collection_tools: {
+        Row: {
+          blurb: string | null
+          collection_id: string
+          id: string
+          rank: number
+          tool_id: string
+        }
+        Insert: {
+          blurb?: string | null
+          collection_id: string
+          id?: string
+          rank?: number
+          tool_id: string
+        }
+        Update: {
+          blurb?: string | null
+          collection_id?: string
+          id?: string
+          rank?: number
+          tool_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_tools_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_tools_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          created_at: string | null
+          description: string
+          h1: string
+          icon: string | null
+          id: string
+          meta_description: string | null
+          slug: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          h1: string
+          icon?: string | null
+          id?: string
+          meta_description?: string | null
+          slug: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          h1?: string
+          icon?: string | null
+          id?: string
+          meta_description?: string | null
+          slug?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           body_md: string
@@ -828,6 +906,36 @@ export type Database = {
           },
         ]
       }
+      tool_suggestions: {
+        Row: {
+          category_slug: string | null
+          contact_email: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          status: string
+          website_url: string
+        }
+        Insert: {
+          category_slug?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          website_url: string
+        }
+        Update: {
+          category_slug?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          website_url?: string
+        }
+        Relationships: []
+      }
       tool_tags: {
         Row: {
           tag_id: string
@@ -866,11 +974,16 @@ export type Database = {
           created_at: string
           edited_by_admin: boolean
           embedding: string | null
+          featured_order: number
+          featured_until: string | null
           founded_year: number | null
+          github_stars: number | null
           has_free_tier: boolean
           hq_city: string | null
           hq_country: string | null
           id: string
+          integrations: string[]
+          is_featured: boolean
           key_strengths: string[] | null
           logo_url: string | null
           model_provider: string | null
@@ -878,6 +991,7 @@ export type Database = {
           open_source: boolean
           popularity_score: number
           pricing_currency: string
+          pricing_detail: string | null
           pricing_starts_at: number | null
           pricing_tier: string
           primary_category_id: string | null
@@ -888,6 +1002,7 @@ export type Database = {
           status: string
           submitted_by: string | null
           tagline: string
+          traffic_tier: string | null
           updated_at: string
           website_url: string
         }
@@ -898,11 +1013,16 @@ export type Database = {
           created_at?: string
           edited_by_admin?: boolean
           embedding?: string | null
+          featured_order?: number
+          featured_until?: string | null
           founded_year?: number | null
+          github_stars?: number | null
           has_free_tier?: boolean
           hq_city?: string | null
           hq_country?: string | null
           id?: string
+          integrations?: string[]
+          is_featured?: boolean
           key_strengths?: string[] | null
           logo_url?: string | null
           model_provider?: string | null
@@ -910,6 +1030,7 @@ export type Database = {
           open_source?: boolean
           popularity_score?: number
           pricing_currency?: string
+          pricing_detail?: string | null
           pricing_starts_at?: number | null
           pricing_tier: string
           primary_category_id?: string | null
@@ -920,6 +1041,7 @@ export type Database = {
           status?: string
           submitted_by?: string | null
           tagline: string
+          traffic_tier?: string | null
           updated_at?: string
           website_url: string
         }
@@ -930,11 +1052,16 @@ export type Database = {
           created_at?: string
           edited_by_admin?: boolean
           embedding?: string | null
+          featured_order?: number
+          featured_until?: string | null
           founded_year?: number | null
+          github_stars?: number | null
           has_free_tier?: boolean
           hq_city?: string | null
           hq_country?: string | null
           id?: string
+          integrations?: string[]
+          is_featured?: boolean
           key_strengths?: string[] | null
           logo_url?: string | null
           model_provider?: string | null
@@ -942,6 +1069,7 @@ export type Database = {
           open_source?: boolean
           popularity_score?: number
           pricing_currency?: string
+          pricing_detail?: string | null
           pricing_starts_at?: number | null
           pricing_tier?: string
           primary_category_id?: string | null
@@ -952,6 +1080,7 @@ export type Database = {
           status?: string
           submitted_by?: string | null
           tagline?: string
+          traffic_tier?: string | null
           updated_at?: string
           website_url?: string
         }
@@ -1024,17 +1153,22 @@ export type Database = {
           avg_stars: number
           category_name: string
           category_slug: string
+          github_stars: number
           has_free_tier: boolean
           id: string
+          integrations: string[]
+          is_featured: boolean
           logo_url: string
           name: string
           open_source: boolean
+          pricing_detail: string
           pricing_tier: string
           primary_category_id: string
           rank: number
           rating_count: number
           slug: string
           tagline: string
+          traffic_tier: string
         }[]
       }
       show_limit: { Args: never; Returns: number }

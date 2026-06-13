@@ -169,6 +169,7 @@ function Nav() {
           <nav className="hidden md:flex items-center gap-0.5 text-sm">
             {[
               { to: "/tools", label: "Browse" },
+              { to: "/collections", label: "Collections" },
               { to: "/compare", label: "Compare" },
               { to: "/chat", label: "Ask AI" },
             ].map(({ to, label }) => (
@@ -251,6 +252,13 @@ function Nav() {
               Browse
             </Link>
             <Link
+              to="/collections"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              Collections
+            </Link>
+            <Link
               to="/compare"
               className="py-2.5 text-text-muted hover:text-text transition-colors"
               onClick={() => setMobileOpen(false)}
@@ -294,9 +302,10 @@ function Footer() {
           {/* Links + copyright */}
           <div className="flex items-center gap-5 text-xs text-text-muted">
             <Link to="/tools" className="hover:text-text transition-colors">Browse</Link>
+            <Link to="/collections" className="hover:text-text transition-colors">Collections</Link>
             <Link to="/compare" className="hover:text-text transition-colors">Compare</Link>
             <Link to="/chat" className="hover:text-text transition-colors">Ask AI</Link>
-            <Link to="/submit" className="hover:text-text transition-colors">Submit</Link>
+            <Link to="/suggest" className="hover:text-text transition-colors">Suggest a tool</Link>
             <span className="text-text-subtle/40">·</span>
             <span className="text-text-subtle">© {new Date().getFullYear()} AI Wiki</span>
           </div>
