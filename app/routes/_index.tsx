@@ -170,12 +170,25 @@ export default function Home() {
     <div className="flex flex-col">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative isolate container pt-14 pb-10 sm:pt-20 sm:pb-14 text-center max-w-3xl mx-auto overflow-hidden">
-        {/* Background glow */}
+      <section className="relative isolate pt-14 pb-10 sm:pt-20 sm:pb-14 overflow-hidden">
+        {/* Background: grid mesh + radial bloom */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[760px] h-[520px] rounded-full opacity-[0.12] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,var(--accent-2)_38%,color-mix(in_srgb,var(--accent-2)_60%,transparent)_62%,transparent_82%)]" />
+          {/* Grid mesh — fades out toward the edges */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px)",
+              backgroundSize: "54px 54px",
+              maskImage: "radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 78%)",
+              WebkitMaskImage: "radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 78%)",
+            }}
+          />
+          {/* Radial bloom */}
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[1100px] h-[600px] rounded-full opacity-[0.14] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,var(--accent-2)_36%,color-mix(in_srgb,var(--accent-2)_55%,transparent)_60%,transparent_80%)]" />
         </div>
 
+        <div className="container max-w-3xl mx-auto text-center">
         {/* Logo + badge */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <img src="/logo.png" alt="AI Wiki" className="w-10 h-10 object-contain" />
@@ -235,6 +248,7 @@ export default function Home() {
 
         {/* Stats strip */}
         <StatStrip stats={stats} />
+        </div>
       </section>
 
       {/* ── Featured tools ────────────────────────────────────────────────── */}
