@@ -190,13 +190,13 @@ export default function Home() {
             className="galaxy-stars absolute inset-0 opacity-[0.45]"
             style={{
               backgroundImage:
-                "radial-gradient(1px 1px at 25px 35px, #fff, transparent)," +
-                "radial-gradient(1px 1px at 140px 60px, #fff, transparent)," +
-                "radial-gradient(1.5px 1.5px at 75px 120px, #fff, transparent)," +
-                "radial-gradient(1px 1px at 200px 90px, #fff, transparent)," +
-                "radial-gradient(1px 1px at 50px 180px, #fff, transparent)," +
-                "radial-gradient(1.5px 1.5px at 250px 160px, #fff, transparent)," +
-                "radial-gradient(1px 1px at 310px 40px, #fff, transparent)",
+                "radial-gradient(1px 1px at 25px 35px, var(--accent-2), transparent)," +
+                "radial-gradient(1px 1px at 140px 60px, var(--accent-2), transparent)," +
+                "radial-gradient(1.5px 1.5px at 75px 120px, var(--accent-2), transparent)," +
+                "radial-gradient(1px 1px at 200px 90px, var(--accent-2), transparent)," +
+                "radial-gradient(1px 1px at 50px 180px, var(--accent-2), transparent)," +
+                "radial-gradient(1.5px 1.5px at 250px 160px, var(--accent-2), transparent)," +
+                "radial-gradient(1px 1px at 310px 40px, var(--accent-2), transparent)",
               backgroundSize: "340px 340px",
               backgroundRepeat: "repeat",
               maskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 20%, transparent 80%)",
