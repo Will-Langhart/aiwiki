@@ -175,7 +175,7 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           {/* Nebula color clouds — soft, off-center, brand-tinted */}
           <div
-            className="absolute inset-0 opacity-[0.13]"
+            className="galaxy-nebula absolute inset-0 opacity-[0.13]"
             style={{
               backgroundImage:
                 "radial-gradient(ellipse 50% 45% at 22% 18%, var(--accent), transparent 70%)," +
@@ -187,7 +187,7 @@ export default function Home() {
           />
           {/* Star field — scattered faint dots, fading toward the edges */}
           <div
-            className="absolute inset-0 opacity-[0.45]"
+            className="galaxy-stars absolute inset-0 opacity-[0.45]"
             style={{
               backgroundImage:
                 "radial-gradient(1px 1px at 25px 35px, #fff, transparent)," +

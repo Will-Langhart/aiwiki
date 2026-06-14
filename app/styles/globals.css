@@ -95,3 +95,23 @@
   ::-webkit-scrollbar-track  { background: var(--surface); }
   ::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 9999px; }
 }
+
+/* ─── Galaxy hero backdrop — subtle ambient motion ───────────────────────────
+   Stars drift one tile-width (seamless loop); nebula gently floats + breathes. */
+@keyframes galaxy-stars-drift {
+  to { background-position: 340px 340px; }
+}
+
+@keyframes galaxy-nebula-float {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -1.5%, 0) scale(1.05); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.galaxy-stars  { animation: galaxy-stars-drift 180s linear infinite; }
+.galaxy-nebula { animation: galaxy-nebula-float 36s ease-in-out infinite; will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .galaxy-stars,
+  .galaxy-nebula { animation: none; }
+}
