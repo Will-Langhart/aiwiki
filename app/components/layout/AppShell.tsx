@@ -137,6 +137,8 @@ function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { user } = useCurrentUser();
+  const { pathname } = useLocation();
+  const isLanding = pathname === "/";
 
   // Cmd+K / Ctrl+K global shortcut
   useEffect(() => {
@@ -165,30 +167,32 @@ function Nav() {
             <span className="tracking-tight">AI Wiki</span>
           </Link>
 
-          {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-0.5 text-sm">
-            {[
-              { to: "/tools", label: "Browse" },
-              { to: "/collections", label: "Collections" },
-              { to: "/compare", label: "Compare" },
-              { to: "/chat", label: "Ask AI" },
-            ].map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  cn(
-                    "px-3 py-1.5 rounded-md transition-colors outline-none",
-                    isActive
-                      ? "text-text bg-surface-2 font-medium"
-                      : "text-text-muted hover:text-text hover:bg-surface-2"
-                  )
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
+          {/* Desktop nav links — hidden on the landing page */}
+          {!isLanding && (
+            <nav className="hidden md:flex items-center gap-0.5 text-sm">
+              {[
+                { to: "/tools", label: "Browse" },
+                { to: "/collections", label: "Collections" },
+                { to: "/compare", label: "Compare" },
+                { to: "/chat", label: "Ask AI" },
+              ].map(({ to, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    cn(
+                      "px-3 py-1.5 rounded-md transition-colors outline-none",
+                      isActive
+                        ? "text-text bg-surface-2 font-medium"
+                        : "text-text-muted hover:text-text hover:bg-surface-2"
+                    )
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          )}
 
           {/* Right side actions */}
           <div className="flex items-center gap-1.5">
@@ -244,34 +248,38 @@ function Nav() {
         {/* Mobile nav */}
         {mobileOpen && (
           <div className="md:hidden border-t border-border bg-bg/95 backdrop-blur-md py-2 px-4 flex flex-col gap-0.5 text-sm">
-            <Link
-              to="/tools"
-              className="py-2.5 text-text-muted hover:text-text transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Browse
-            </Link>
-            <Link
-              to="/collections"
-              className="py-2.5 text-text-muted hover:text-text transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Collections
-            </Link>
-            <Link
-              to="/compare"
-              className="py-2.5 text-text-muted hover:text-text transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Compare
-            </Link>
-            <Link
-              to="/chat"
-              className="py-2.5 text-text-muted hover:text-text transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Ask AI
-            </Link>
+            {!isLanding && (
+              <>
+                <Link
+                  to="/tools"
+                  className="py-2.5 text-text-muted hover:text-text transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Browse
+                </Link>
+                <Link
+                  to="/collections"
+                  className="py-2.5 text-text-muted hover:text-text transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Collections
+                </Link>
+                <Link
+                  to="/compare"
+                  className="py-2.5 text-text-muted hover:text-text transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Compare
+                </Link>
+                <Link
+                  to="/chat"
+                  className="py-2.5 text-text-muted hover:text-text transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Ask AI
+                </Link>
+              </>
+            )}
             <Link
               to="/submit"
               className="py-2.5 text-text-muted hover:text-text transition-colors"
