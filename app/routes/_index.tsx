@@ -170,10 +170,10 @@ export default function Home() {
     <div className="flex flex-col">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative container pt-14 pb-10 sm:pt-20 sm:pb-14 text-center max-w-3xl mx-auto overflow-hidden">
+      <section className="relative isolate container pt-14 pb-10 sm:pt-20 sm:pb-14 text-center max-w-3xl mx-auto overflow-hidden">
         {/* Background glow */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[700px] h-[500px] rounded-full opacity-[0.07] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,var(--accent-2)_38%,color-mix(in_srgb,var(--accent-2)_60%,transparent)_62%,transparent_82%)]" />
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[760px] h-[520px] rounded-full opacity-[0.12] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,var(--accent-2)_38%,color-mix(in_srgb,var(--accent-2)_60%,transparent)_62%,transparent_82%)]" />
         </div>
 
         {/* Logo + badge */}
