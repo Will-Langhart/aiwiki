@@ -96,20 +96,32 @@
   ::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 9999px; }
 }
 
-/* ─── Galaxy hero backdrop — subtle ambient motion ───────────────────────────
-   Stars drift one tile-width (seamless loop); nebula gently floats + breathes. */
+/* ─── Galaxy hero backdrop — ambient motion ──────────────────────────────────
+   Stars drift one tile-width (seamless loop) and twinkle; nebula floats + breathes. */
 @keyframes galaxy-stars-drift {
   to { background-position: 340px 340px; }
 }
 
+@keyframes galaxy-stars-twinkle {
+  0%, 100% { opacity: 0.30; }
+  50%      { opacity: 0.60; }
+}
+
 @keyframes galaxy-nebula-float {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(2%, -1.5%, 0) scale(1.05); }
+  50%  { transform: translate3d(4%, -3%, 0) scale(1.08); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
-.galaxy-stars  { animation: galaxy-stars-drift 180s linear infinite; }
-.galaxy-nebula { animation: galaxy-nebula-float 36s ease-in-out infinite; will-change: transform; }
+.galaxy-stars {
+  animation:
+    galaxy-stars-drift 70s linear infinite,
+    galaxy-stars-twinkle 5s ease-in-out infinite;
+}
+.galaxy-nebula {
+  animation: galaxy-nebula-float 24s ease-in-out infinite;
+  will-change: transform;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .galaxy-stars,
