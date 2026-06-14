@@ -171,8 +171,38 @@ export default function Home() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate pt-14 pb-10 sm:pt-20 sm:pb-14 overflow-hidden">
-        {/* Background: grid mesh + radial bloom */}
+        {/* Background: galaxy glow + grid mesh */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+          {/* Nebula color clouds — soft, off-center, brand-tinted */}
+          <div
+            className="absolute inset-0 opacity-[0.13]"
+            style={{
+              backgroundImage:
+                "radial-gradient(ellipse 50% 45% at 22% 18%, var(--accent), transparent 70%)," +
+                "radial-gradient(ellipse 45% 40% at 80% 12%, var(--accent-2), transparent 70%)," +
+                "radial-gradient(ellipse 55% 55% at 60% 70%, color-mix(in srgb, var(--accent) 60%, #7c3aed), transparent 72%)",
+              maskImage: "radial-gradient(ellipse 90% 80% at 50% 5%, #000 30%, transparent 85%)",
+              WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 50% 5%, #000 30%, transparent 85%)",
+            }}
+          />
+          {/* Star field — scattered faint dots, fading toward the edges */}
+          <div
+            className="absolute inset-0 opacity-[0.45]"
+            style={{
+              backgroundImage:
+                "radial-gradient(1px 1px at 25px 35px, #fff, transparent)," +
+                "radial-gradient(1px 1px at 140px 60px, #fff, transparent)," +
+                "radial-gradient(1.5px 1.5px at 75px 120px, #fff, transparent)," +
+                "radial-gradient(1px 1px at 200px 90px, #fff, transparent)," +
+                "radial-gradient(1px 1px at 50px 180px, #fff, transparent)," +
+                "radial-gradient(1.5px 1.5px at 250px 160px, #fff, transparent)," +
+                "radial-gradient(1px 1px at 310px 40px, #fff, transparent)",
+              backgroundSize: "340px 340px",
+              backgroundRepeat: "repeat",
+              maskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 20%, transparent 80%)",
+              WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 20%, transparent 80%)",
+            }}
+          />
           {/* Grid mesh — fades out toward the edges */}
           <div
             className="absolute inset-0"
@@ -184,8 +214,6 @@ export default function Home() {
               WebkitMaskImage: "radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 78%)",
             }}
           />
-          {/* Radial bloom */}
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[1100px] h-[600px] rounded-full opacity-[0.14] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,var(--accent-2)_36%,color-mix(in_srgb,var(--accent-2)_55%,transparent)_60%,transparent_80%)]" />
         </div>
 
         <div className="container max-w-3xl mx-auto text-center">
