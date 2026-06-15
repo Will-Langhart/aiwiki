@@ -63,6 +63,18 @@
   max-width: 1280px;
 }
 
+/* ─── App background — subtle page-wide gradient depth ──────────────────────
+   A faint blue glow up top (behind the hero/nav), a cyan glow anchored at the
+   bottom, and a gentle vertical tint. Viewport-fixed so it reads as a calm,
+   consistent cosmic backdrop behind all content. Token-based → theme-aware. */
+.app-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 100% 55% at 50% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+    radial-gradient(ellipse 85% 50% at 50% 108%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 60%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 3%, var(--bg)), var(--bg) 45%);
+}
+
 /* ─── Base layer overrides ────────────────────────────────────────────────── */
 @layer base {
   *,
@@ -96,15 +108,17 @@
   ::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 9999px; }
 }
 
-/* ─── Galaxy hero backdrop — ambient motion ──────────────────────────────────
-   Stars drift one tile-width (seamless loop) and twinkle; nebula floats + breathes. */
-@keyframes galaxy-stars-drift {
-  to { background-position: 340px 340px; }
-}
+/* ─── Galaxy hero backdrop — layered parallax motion ─────────────────────────
+   Three star layers drift at different speeds (parallax) and seamlessly loop one
+   tile-width; the near layer twinkles; nebula floats + breathes; shooting stars
+   streak occasionally. */
+@keyframes galaxy-drift-far  { to { background-position: 320px 320px; } }
+@keyframes galaxy-drift-mid  { to { background-position: -380px 380px; } }
+@keyframes galaxy-drift-near { to { background-position: 460px 460px; } }
 
-@keyframes galaxy-stars-twinkle {
+@keyframes galaxy-twinkle {
   0%, 100% { opacity: 0.30; }
-  50%      { opacity: 0.60; }
+  50%      { opacity: 0.70; }
 }
 
 @keyframes galaxy-nebula-float {
@@ -113,17 +127,35 @@
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
-.galaxy-stars {
+/* Streak appears for ~10% of the cycle, then waits — reads as "occasional". */
+@keyframes galaxy-shoot {
+  0%   { transform: translate3d(0, 0, 0) rotate(20deg); opacity: 0; }
+  2%   { opacity: 1; }
+  10%  { transform: translate3d(var(--shoot-dx, 460px), var(--shoot-dy, 167px), 0) rotate(20deg); opacity: 0; }
+  100% { transform: translate3d(var(--shoot-dx, 460px), var(--shoot-dy, 167px), 0) rotate(20deg); opacity: 0; }
+}
+
+.galaxy-stars-far { animation: galaxy-drift-far 220s linear infinite; }
+.galaxy-stars-mid { animation: galaxy-drift-mid 140s linear infinite; }
+.galaxy-stars-near {
   animation:
-    galaxy-stars-drift 70s linear infinite,
-    galaxy-stars-twinkle 5s ease-in-out infinite;
+    galaxy-drift-near 90s linear infinite,
+    galaxy-twinkle 4.5s ease-in-out infinite;
 }
 .galaxy-nebula {
   animation: galaxy-nebula-float 24s ease-in-out infinite;
   will-change: transform;
 }
+.galaxy-shoot {
+  animation: galaxy-shoot 9s ease-in infinite;
+  will-change: transform, opacity;
+  opacity: 0;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .galaxy-stars,
-  .galaxy-nebula { animation: none; }
+  .galaxy-stars-far,
+  .galaxy-stars-mid,
+  .galaxy-stars-near,
+  .galaxy-nebula,
+  .galaxy-shoot { animation: none; }
 }
