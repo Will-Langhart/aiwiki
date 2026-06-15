@@ -131,40 +131,43 @@ export default function ToolsIndex() {
         </p>
       </div>
 
-      {/* Search bar */}
-      <div className="relative mb-5">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={15} />
-        <Input
-          type="search"
-          placeholder="Search tools, categories, use cases…"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="pl-9 pr-9 h-10 bg-surface border-border focus:border-accent/50 transition-colors"
-        />
-        {inputValue && (
-          <button
-            type="button"
-            onClick={() => {
-              setInputValue("");
-              const next = new URLSearchParams(searchParams);
-              next.delete("q");
-              setSearchParams(next, { replace: true });
-            }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
-          >
-            <X size={14} />
-          </button>
+      {/* Toolbar: search + filters grouped into one panel */}
+      <div className="rounded-xl border border-border bg-surface/40 p-3 sm:p-4 space-y-3.5 mb-6">
+        {/* Search bar */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={15} />
+          <Input
+            type="search"
+            placeholder="Search tools, categories, use cases…"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="pl-9 pr-9 h-10 bg-surface border-border focus:border-accent/50 transition-colors"
+          />
+          {inputValue && (
+            <button
+              type="button"
+              onClick={() => {
+                setInputValue("");
+                const next = new URLSearchParams(searchParams);
+                next.delete("q");
+                setSearchParams(next, { replace: true });
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter bar */}
+        {!catsLoading && (
+          <FilterBar
+            categories={categories}
+            resultCount={tools.length}
+            loading={toolsLoading}
+          />
         )}
       </div>
-
-      {/* Filter bar */}
-      {!catsLoading && (
-        <FilterBar
-          categories={categories}
-          resultCount={tools.length}
-          loading={toolsLoading}
-        />
-      )}
 
       {/* Grid */}
       <DirectoryGrid tools={tools} loading={toolsLoading} />

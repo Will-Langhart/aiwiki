@@ -65,15 +65,20 @@ function formatStars(n: number): string {
 }
 
 function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: string | null; size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "w-8 h-8" : "w-11 h-11";
-  const text = size === "sm" ? "text-xs" : "text-sm";
+  const dim = size === "sm" ? "w-9 h-9" : "w-11 h-11";
+  const text = size === "sm" ? "text-sm" : "text-base";
   return (
-    <div className={`relative flex-shrink-0 ${dim}`}>
+    <div
+      className={cn(
+        "relative flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/70 group-hover:ring-accent/40 transition-all duration-200",
+        dim,
+      )}
+    >
       {logo_url && (
         <img
           src={logo_url}
           alt={`${name} logo`}
-          className={`${dim} rounded-lg object-contain bg-surface-2 p-0.5 shadow-[var(--shadow-card)]`}
+          className={`${dim} rounded-lg object-contain bg-surface-2 p-1`}
           onError={(e) => {
             e.currentTarget.style.display = "none";
             const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -94,6 +99,24 @@ function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: str
   );
 }
 
+/** Uniform metadata chip for the card footer. */
+function MetaChip({
+  icon: Icon,
+  accent,
+  children,
+}: {
+  icon?: React.ElementType;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-surface-2/70 border border-border/50 text-text-muted">
+      {Icon && <Icon size={9} className={accent ? "text-accent" : "text-text-subtle"} />}
+      {children}
+    </span>
+  );
+}
+
 export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
   const hasFreeTier = tool.has_free_tier || tool.pricing_tier === "free" || tool.pricing_tier === "freemium";
   const { items, toggle } = useCompareStore();
@@ -102,7 +125,7 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
   const shownIntegrations = (tool.integrations ?? []).slice(0, 4);
 
   return (
-    <div className={cn("relative group", className)}>
+    <div className={cn("relative group h-full", className)}>
       {/* Featured ribbon */}
       {tool.is_featured && (
         <div
@@ -139,17 +162,17 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
       <Link
         to={`/tools/${tool.slug}`}
         className={cn(
-          "block rounded-xl border border-border bg-surface",
+          "flex h-full flex-col rounded-xl border border-border bg-surface",
           "shadow-[var(--shadow-card)]",
-          "hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/40",
-          "transition-all duration-200 p-3",
+          "hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/40",
+          "transition-all duration-200 p-3.5",
         )}
       >
         {/* Header row */}
-        <div className="flex items-start gap-2 mb-2">
+        <div className="flex items-start gap-2.5 mb-2">
           <ToolLogo name={tool.name} logo_url={tool.logo_url} size="sm" />
-          <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
               <h3 className="text-sm font-semibold text-text group-hover:text-accent transition-colors leading-tight truncate">
                 {tool.name}
               </h3>
@@ -160,13 +183,15 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
               )}
             </div>
             {tool.category_name && (
-              <p className="text-[11px] text-text-subtle mt-0.5 truncate">{tool.category_name}</p>
+              <p className="text-[10px] uppercase tracking-wide text-text-subtle mt-1 truncate">
+                {tool.category_name}
+              </p>
             )}
           </div>
         </div>
 
         {/* Tagline */}
-        <p className="text-xs text-text-muted leading-snug line-clamp-2 mb-2.5">
+        <p className="text-xs text-text-muted leading-snug line-clamp-2 mb-2">
           {tool.tagline}
         </p>
 
@@ -188,74 +213,66 @@ export function ToolCard({ tool, dense = false, className }: ToolCardProps) {
                 {name}
               </span>
             ))}
+            {(tool.integrations?.length ?? 0) > shownIntegrations.length && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-text-subtle">
+                +{(tool.integrations?.length ?? 0) - shownIntegrations.length}
+              </span>
+            )}
           </div>
         )}
 
-        {/* Footer row */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={cn(
-            "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
-            PRICING_STYLES[tool.pricing_tier] ?? "bg-surface-2 text-text-muted border-border"
-          )}>
-            {PRICING_LABELS[tool.pricing_tier] ?? tool.pricing_tier}
-          </span>
-
-          {tool.audience_fit && AUDIENCE_LABELS[tool.audience_fit] && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <Code2 size={9} className="text-accent/70" />
-              {AUDIENCE_LABELS[tool.audience_fit]}
+        {/* Divider + metadata pinned to the bottom for aligned rows */}
+        <div className="mt-auto pt-2.5 border-t border-border/60 space-y-1.5">
+          {/* Primary signals */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={cn(
+              "inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold border",
+              PRICING_STYLES[tool.pricing_tier] ?? "bg-surface-2 text-text-muted border-border"
+            )}>
+              {PRICING_LABELS[tool.pricing_tier] ?? tool.pricing_tier}
             </span>
-          )}
 
-          {tool.api_available && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <Zap size={9} className="text-accent" />
-              API
-            </span>
-          )}
+            {tool.audience_fit && AUDIENCE_LABELS[tool.audience_fit] && (
+              <MetaChip icon={Code2} accent>{AUDIENCE_LABELS[tool.audience_fit]}</MetaChip>
+            )}
+            {tool.api_available && <MetaChip icon={Zap} accent>API</MetaChip>}
+            {tool.open_source && <MetaChip icon={GitFork}>OSS</MetaChip>}
+            {tool.self_hostable && <MetaChip icon={Server}>Self-host</MetaChip>}
 
-          {tool.open_source && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <GitFork size={9} />
-              OSS
-            </span>
-          )}
+            {tool.avg_stars != null && tool.avg_stars > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] font-medium text-text-muted ml-auto">
+                <Star size={9} className="fill-amber-400 text-amber-400" />
+                {tool.avg_stars.toFixed(1)}
+                {tool.rating_count != null && tool.rating_count > 0 && (
+                  <span className="text-text-subtle/70 ml-0.5">({tool.rating_count})</span>
+                )}
+              </span>
+            )}
+          </div>
 
-          {tool.self_hostable && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <Server size={9} />
-              Self-host
-            </span>
-          )}
-
-          {tool.model_provider && (
-            <span className="text-[10px] text-text-subtle truncate max-w-[80px]" title={tool.model_provider}>
-              {tool.model_provider}
-            </span>
-          )}
-
-          {tool.github_stars != null && tool.github_stars > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <Github size={9} />
-              {formatStars(tool.github_stars)}
-            </span>
-          )}
-
-          {tool.traffic_tier && TRAFFIC_LABELS[tool.traffic_tier] && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle">
-              <Users size={9} />
-              {TRAFFIC_LABELS[tool.traffic_tier]}
-            </span>
-          )}
-
-          {tool.avg_stars != null && tool.avg_stars > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-text-subtle ml-auto">
-              <Star size={9} className="fill-amber-400 text-amber-400" />
-              {tool.avg_stars.toFixed(1)}
-              {tool.rating_count != null && tool.rating_count > 0 && (
-                <span className="text-text-subtle/60 ml-0.5">({tool.rating_count})</span>
+          {/* Secondary stats — de-emphasized */}
+          {(tool.model_provider ||
+            (tool.github_stars != null && tool.github_stars > 0) ||
+            (tool.traffic_tier && TRAFFIC_LABELS[tool.traffic_tier])) && (
+            <div className="flex items-center gap-2 flex-wrap text-[10px] text-text-subtle">
+              {tool.model_provider && (
+                <span className="truncate max-w-[90px]" title={tool.model_provider}>
+                  {tool.model_provider}
+                </span>
               )}
-            </span>
+              {tool.github_stars != null && tool.github_stars > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <Github size={9} />
+                  {formatStars(tool.github_stars)}
+                </span>
+              )}
+              {tool.traffic_tier && TRAFFIC_LABELS[tool.traffic_tier] && (
+                <span className="flex items-center gap-0.5">
+                  <Users size={9} />
+                  {TRAFFIC_LABELS[tool.traffic_tier]}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </Link>

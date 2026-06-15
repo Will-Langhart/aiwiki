@@ -72,8 +72,8 @@ function Pill({
       className={cn(
         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border whitespace-nowrap",
         active
-          ? "bg-accent text-accent-fg border-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)]"
-          : "bg-surface-2 text-text-muted hover:bg-accent/10 hover:text-accent border-transparent hover:border-accent/30",
+          ? "bg-accent text-accent-fg border-accent shadow-[0_1px_2px_color-mix(in_srgb,var(--accent)_35%,transparent)]"
+          : "bg-surface text-text-muted hover:bg-accent/8 hover:text-accent border-border hover:border-accent/40",
         className
       )}
     >
@@ -120,7 +120,7 @@ export function FilterBar({ categories, resultCount, loading }: FilterBarProps) 
   };
 
   return (
-    <div className="space-y-2 mb-6">
+    <div className="space-y-2.5">
       {/* Category pills */}
       <div className="flex gap-1.5 flex-wrap">
         <Pill
