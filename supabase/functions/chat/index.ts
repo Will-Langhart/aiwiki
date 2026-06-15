@@ -190,7 +190,7 @@ Casual, direct, and opinionated. Short sentences. Cut to what actually matters. 
 - Never repeat the user's question back to them
 - Always use [tool:slug] format when naming a specific tool
 
-${toolContext ? `## Available tools context\n${toolContext}` : "## Note\nNo closely matching tools found in the directory for this query — answer from general knowledge and suggest the user browse /tools or /collections for relevant options."}`;
+${toolContext ? `## Available tools context\n${toolContext}` : "## Note\nNo closely matching tools found in the directory for this query — answer from general knowledge and suggest the user browse /tools for relevant options."}`;
 
     const messages = conversationHistory.map((m) => ({
       role: m.role as "user" | "assistant",

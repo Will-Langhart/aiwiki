@@ -172,7 +172,6 @@ function Nav() {
             <nav className="hidden md:flex items-center gap-0.5 text-sm">
               {[
                 { to: "/tools", label: "Browse" },
-                { to: "/collections", label: "Collections" },
                 { to: "/compare", label: "Compare" },
                 { to: "/chat", label: "Ask AI" },
               ].map(({ to, label }) => (
@@ -258,13 +257,6 @@ function Nav() {
                   Browse
                 </Link>
                 <Link
-                  to="/collections"
-                  className="py-2.5 text-text-muted hover:text-text transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Collections
-                </Link>
-                <Link
                   to="/compare"
                   className="py-2.5 text-text-muted hover:text-text transition-colors"
                   onClick={() => setMobileOpen(false)}
@@ -310,7 +302,6 @@ function Footer() {
           {/* Links + copyright */}
           <div className="flex items-center gap-5 text-xs text-text-muted">
             <Link to="/tools" className="hover:text-text transition-colors">Browse</Link>
-            <Link to="/collections" className="hover:text-text transition-colors">Collections</Link>
             <Link to="/compare" className="hover:text-text transition-colors">Compare</Link>
             <Link to="/chat" className="hover:text-text transition-colors">Ask AI</Link>
             <Link to="/suggest" className="hover:text-text transition-colors">Suggest a tool</Link>
@@ -330,7 +321,7 @@ function AppShellInner() {
   const showFooter = !NO_FOOTER_ROUTES.includes(pathname);
 
   return (
-    <div className="h-screen grid grid-rows-[auto_1fr] bg-bg text-text">
+    <div className="h-screen grid grid-rows-[auto_1fr] app-bg text-text">
       <Nav />
       <main className={cn(
         "min-h-0",

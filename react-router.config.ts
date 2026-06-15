@@ -15,11 +15,10 @@ export default {
 
     const supabase = createClient(url, key);
 
-    const [{ data: tools }, { data: categories }, { data: collections }] =
+    const [{ data: tools }, { data: categories }] =
       await Promise.all([
         supabase.from("tools").select("slug").eq("status", "published"),
         supabase.from("categories").select("slug"),
-        supabase.from("collections").select("slug"),
       ]);
 
     const toolPaths = (tools ?? []).flatMap((t) => [
@@ -30,8 +29,6 @@ export default {
 
     const categoryPaths = (categories ?? []).map((c) => `/categories/${c.slug}`);
 
-    const collectionPaths = (collections ?? []).map((c) => `/collections/${c.slug}`);
-
-    return ["/", "/tools", "/collections", "/suggest", ...toolPaths, ...categoryPaths, ...collectionPaths];
+    return ["/", "/tools", "/suggest", ...toolPaths, ...categoryPaths];
   },
 } satisfies Config;

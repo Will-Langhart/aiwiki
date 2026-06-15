@@ -158,84 +158,6 @@ export type Database = {
           },
         ]
       }
-      collection_tools: {
-        Row: {
-          blurb: string | null
-          collection_id: string
-          id: string
-          rank: number
-          tool_id: string
-        }
-        Insert: {
-          blurb?: string | null
-          collection_id: string
-          id?: string
-          rank?: number
-          tool_id: string
-        }
-        Update: {
-          blurb?: string | null
-          collection_id?: string
-          id?: string
-          rank?: number
-          tool_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "collection_tools_collection_id_fkey"
-            columns: ["collection_id"]
-            isOneToOne: false
-            referencedRelation: "collections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "collection_tools_tool_id_fkey"
-            columns: ["tool_id"]
-            isOneToOne: false
-            referencedRelation: "tools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      collections: {
-        Row: {
-          created_at: string | null
-          description: string
-          h1: string
-          icon: string | null
-          id: string
-          meta_description: string | null
-          slug: string
-          sort_order: number | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description: string
-          h1: string
-          icon?: string | null
-          id?: string
-          meta_description?: string | null
-          slug: string
-          sort_order?: number | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string
-          h1?: string
-          icon?: string | null
-          id?: string
-          meta_description?: string | null
-          slug?: string
-          sort_order?: number | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       comments: {
         Row: {
           body_md: string
@@ -1159,6 +1081,7 @@ export type Database = {
           integrations: string[]
           is_featured: boolean
           logo_url: string
+          model_provider: string
           name: string
           open_source: boolean
           pricing_detail: string
@@ -1166,6 +1089,7 @@ export type Database = {
           primary_category_id: string
           rank: number
           rating_count: number
+          self_hostable: boolean
           slug: string
           tagline: string
           traffic_tier: string

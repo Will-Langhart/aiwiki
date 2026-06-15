@@ -11,8 +11,6 @@ export default [
       route("use-cases", "routes/tools.$slug.use-cases.tsx"),
     ]),
     route("categories/:slug", "routes/categories.$slug.tsx"),
-    route("collections", "routes/collections._index.tsx"),
-    route("collections/:slug", "routes/collections.$slug.tsx"),
     route("suggest", "routes/suggest.tsx"),
     route("compare", "routes/compare.tsx"),
     route("search", "routes/search.tsx"),
