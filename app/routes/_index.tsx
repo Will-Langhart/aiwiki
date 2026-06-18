@@ -1,3 +1,4 @@
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -51,6 +52,12 @@ interface SpotlightTool {
   logo_url: string | null;
 }
 
+interface MarqueeLogo {
+  slug: string;
+  name: string;
+  logo_url: string;
+}
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function fetchFeaturedTools(): Promise<FeaturedTool[]> {
   const { data, error } = await supabase.rpc("search_tools", {
@@ -67,6 +74,16 @@ async function fetchSiteStats(): Promise<SiteStats> {
     supabase.from("categories").select("*", { count: "exact", head: true }),
   ]);
   return { tool_count: tool_count ?? 0, category_count: category_count ?? 0 };
+}
+
+async function fetchMarqueeLogos(): Promise<MarqueeLogo[]> {
+  const { data } = await supabase
+    .from("tools")
+    .select("slug, name, logo_url")
+    .eq("status", "published")
+    .not("logo_url", "is", null)
+    .limit(30);
+  return ((data ?? []) as MarqueeLogo[]).filter((t) => !!t.logo_url);
 }
 
 async function fetchSpotlightTools(): Promise<Map<string, SpotlightTool>> {
@@ -107,6 +124,15 @@ const MATCHUPS = [
   { a: "midjourney", b: "runway",         labelA: "Midjourney", labelB: "Runway",        category: "Image & video" },
 ];
 
+// Quick-search chips shown under the hero search box.
+const SEARCH_SUGGESTIONS = [
+  "Image generation",
+  "Coding copilots",
+  "Free tier",
+  "Video editing",
+  "Open source",
+];
+
 const CHAT_PROMPTS = [
   "What's the best AI coding assistant?",
   "Compare free AI image generators",
@@ -138,21 +164,95 @@ const howItWorks = [
 ];
 
 // ── Components ────────────────────────────────────────────────────────────────
+// Eased count-up from 0 → target. Re-runs when target changes (e.g. when async
+// stats arrive). Respects prefers-reduced-motion by snapping to the value.
+function useCountUp(target: number, duration = 1300) {
+  const [val, setVal] = useState(0);
+  const rafRef = useRef(0);
+  useEffect(() => {
+    if (target <= 0) { setVal(0); return; }
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setVal(target); return; }
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - (1 - p) ** 3;
+      setVal(Math.round(target * eased));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+  return val;
+}
+
+function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const n = useCountUp(value);
+  return <>{n.toLocaleString()}{suffix}</>;
+}
+
 function StatStrip({ stats }: { stats: SiteStats | undefined }) {
-  const items = [
-    { value: stats ? `${stats.tool_count}+` : "190+", label: "Tools indexed" },
-    { value: stats ? `${stats.category_count}` : "14", label: "Categories" },
-    { value: "Free", label: "Always free" },
-    { value: "Community", label: "Driven" },
+  const items: { node: React.ReactNode; label: string }[] = [
+    { node: stats ? <CountUp value={stats.tool_count} suffix="+" /> : "190+", label: "Tools indexed" },
+    { node: stats ? <CountUp value={stats.category_count} /> : "14", label: "Categories" },
+    { node: "Free", label: "Always free" },
+    { node: "Community", label: "Driven" },
   ];
   return (
-    <div className="flex items-center justify-center gap-8 sm:gap-12 mt-8 flex-wrap">
-      {items.map((s) => (
-        <div key={s.label} className="text-center">
-          <div className="text-2xl font-bold text-text">{s.value}</div>
-          <div className="text-xs text-text-subtle mt-0.5">{s.label}</div>
-        </div>
+    <div className="flex items-center justify-center gap-5 sm:gap-9 mt-9 flex-wrap">
+      {items.map((s, i) => (
+        <Fragment key={s.label}>
+          {i > 0 && (
+            <span
+              aria-hidden="true"
+              className="hidden sm:block h-9 w-px bg-gradient-to-b from-transparent via-border to-transparent"
+            />
+          )}
+          <div className="text-center">
+            <div
+              className="text-2xl sm:text-[1.7rem] font-bold bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(135deg, var(--text) 30%, var(--accent) 130%)" }}
+            >
+              {s.node}
+            </div>
+            <div className="text-[11px] uppercase tracking-wide text-text-subtle mt-1">{s.label}</div>
+          </div>
+        </Fragment>
       ))}
+    </div>
+  );
+}
+
+function LogoMarquee() {
+  const { data: logos = [] } = useQuery({
+    queryKey: ["marquee-logos"],
+    queryFn: fetchMarqueeLogos,
+    staleTime: 10 * 60 * 1000,
+  });
+  if (logos.length < 8) return null;
+  const row = [...logos, ...logos]; // duplicate for seamless -50% loop
+  return (
+    <div className="mt-12">
+      <p className="text-center text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-4">
+        Indexing the tools practitioners actually use
+      </p>
+      <div className="marquee-mask overflow-hidden">
+        <div className="flex w-max gap-2.5 animate-marquee hover:[animation-play-state:paused]">
+          {row.map((t, i) => (
+            <Link
+              key={`${t.slug}-${i}`}
+              to={`/tools/${t.slug}`}
+              title={t.name}
+              className="group flex items-center gap-2 px-3.5 py-2 flex-shrink-0"
+            >
+              <img src={t.logo_url} alt="" className="w-5 h-5 object-contain rounded" />
+              <span className="text-xs font-medium text-text-muted group-hover:text-text whitespace-nowrap transition-colors">
+                {t.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -445,7 +545,11 @@ export default function Home() {
         {/* Logo + badge */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <img src="/logo.png" alt="AI Wiki" className="w-10 h-10 object-contain" />
-          <div className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-accent/8 border border-accent/20 text-accent">
+          <div className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-accent/8 border border-accent/20 text-accent">
+            <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-75 animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+            </span>
             Community-curated AI tool directory
           </div>
         </div>
@@ -453,12 +557,7 @@ export default function Home() {
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
           The AI tool directory
           <br />
-          <span
-            className="bg-clip-text text-transparent"
-            style={{ backgroundImage: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)" }}
-          >
-            built by the community
-          </span>
+          <span className="hero-gradient-text">built by the community</span>
         </h1>
 
         <p className="text-base sm:text-lg text-text-muted mb-8 leading-relaxed max-w-xl mx-auto">
@@ -467,21 +566,43 @@ export default function Home() {
         </p>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="relative max-w-lg mx-auto mb-6">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none" />
-          <input
-            name="q"
-            type="text"
-            placeholder="Search tools, categories, use cases…"
-            className="w-full pl-10 pr-28 py-3.5 rounded-xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
+        <div className="relative max-w-lg mx-auto mb-4">
+          {/* Soft accent glow behind the field */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-x-6 -inset-y-3 -z-10 opacity-60 blur-2xl"
+            style={{ background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%)" }}
           />
-          <button
-            type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-lg bg-accent text-accent-fg text-xs font-medium hover:opacity-90 transition-opacity"
-          >
-            Search
-          </button>
-        </form>
+          <form onSubmit={handleSearch} className="relative group">
+            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle group-focus-within:text-accent transition-colors pointer-events-none" />
+            <input
+              name="q"
+              type="text"
+              placeholder="Search tools, categories, use cases…"
+              className="w-full pl-11 pr-28 py-4 rounded-2xl border border-border bg-surface/90 backdrop-blur text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/35 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl bg-accent text-accent-fg text-xs font-semibold hover:opacity-90 transition-opacity shadow-[0_0_18px_color-mix(in_srgb,var(--accent)_35%,transparent)]"
+            >
+              Search
+            </button>
+          </form>
+        </div>
+
+        {/* Quick-search chips */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-7">
+          <span className="text-xs text-text-subtle">Popular:</span>
+          {SEARCH_SUGGESTIONS.map((term) => (
+            <Link
+              key={term}
+              to={`/search?q=${encodeURIComponent(term)}`}
+              className="px-2.5 py-1 rounded-full border border-border bg-surface/70 text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 hover:bg-surface transition-colors"
+            >
+              {term}
+            </Link>
+          ))}
+        </div>
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -501,6 +622,11 @@ export default function Home() {
 
         {/* Stats strip */}
         <StatStrip stats={stats} />
+        </div>
+
+        {/* Logo marquee — real indexed tools, seamless infinite scroll */}
+        <div className="container max-w-5xl mx-auto">
+          <LogoMarquee />
         </div>
       </section>
 
