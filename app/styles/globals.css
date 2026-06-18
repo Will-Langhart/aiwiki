@@ -179,11 +179,22 @@
 /* ─── Logo marquee — seamless infinite horizontal scroll ─────────────────────
    The track holds two copies of the list; translating by -50% loops seamlessly.
    Hovering pauses it so users can read/click a tool. */
-@keyframes marquee-scroll { to { transform: translateX(-50%); } }
-.animate-marquee { animation: marquee-scroll 45s linear infinite; }
+@keyframes marquee-scroll { to { transform: translate3d(-50%, 0, 0); } }
+.animate-marquee {
+  animation: marquee-scroll 45s linear infinite;
+  /* Promote the moving track to its own GPU layer so the animation runs on the
+     compositor and never repaints during vertical page scroll. */
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
 .marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  /* Give the masked container its own layer and contain its painting, so the
+     (CPU-side) mask is rasterized once instead of on every scroll frame. */
+  transform: translateZ(0);
+  contain: paint;
 }
 
 @media (prefers-reduced-motion: reduce) {
