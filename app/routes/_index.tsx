@@ -245,7 +245,7 @@ function LogoMarquee() {
               title={t.name}
               className="group flex items-center gap-2 px-3.5 py-2 flex-shrink-0"
             >
-              <img src={t.logo_url} alt="" loading="lazy" decoding="async" className="w-5 h-5 object-contain rounded" />
+              <img src={t.logo_url} alt="" loading="lazy" decoding="async" className="w-8 h-8 object-contain rounded-md" />
               <span className="text-xs font-medium text-text-muted group-hover:text-text whitespace-nowrap transition-colors">
                 {t.name}
               </span>
