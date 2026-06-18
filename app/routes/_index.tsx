@@ -4,7 +4,7 @@ import {
   ArrowRight, Search, GitCompare, MessageSquare,
   Code2, Video, PenLine, BrainCircuit, Image, Mic,
   Workflow, BarChart3, Presentation, Database, ShoppingBag,
-  Headphones, BookOpen, Sparkles,
+  Headphones, BookOpen, Sparkles, Send,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase.client";
 import { ToolCard } from "@/components/tool/ToolCard";
@@ -45,6 +45,12 @@ interface SiteStats {
   category_count: number;
 }
 
+interface SpotlightTool {
+  slug: string;
+  name: string;
+  logo_url: string | null;
+}
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function fetchFeaturedTools(): Promise<FeaturedTool[]> {
   const { data, error } = await supabase.rpc("search_tools", {
@@ -63,6 +69,18 @@ async function fetchSiteStats(): Promise<SiteStats> {
   return { tool_count: tool_count ?? 0, category_count: category_count ?? 0 };
 }
 
+async function fetchSpotlightTools(): Promise<Map<string, SpotlightTool>> {
+  const slugs = MATCHUPS.flatMap((m) => [m.a, m.b]);
+  const { data } = await supabase
+    .from("tools")
+    .select("slug, name, logo_url")
+    .in("slug", slugs)
+    .eq("status", "published");
+  const map = new Map<string, SpotlightTool>();
+  for (const t of (data as SpotlightTool[]) ?? []) map.set(t.slug, t);
+  return map;
+}
+
 // ── Static data ───────────────────────────────────────────────────────────────
 const categories = [
   { slug: "chat-assistants",   label: "Chat Assistants",      icon: BrainCircuit,  color: "text-blue-500" },
@@ -79,6 +97,21 @@ const categories = [
   { slug: "infrastructure",    label: "AI Infrastructure",    icon: Database,      color: "text-slate-400" },
   { slug: "voice",             label: "Voice & Speech",       icon: Mic,           color: "text-teal-500" },
   { slug: "marketing-sales",   label: "Marketing & Sales",    icon: ShoppingBag,   color: "text-lime-500" },
+];
+
+// Curated head-to-head matchups. Slugs are confirmed published tools; `label`
+// is the static fallback shown until live names/logos load (and if the fetch fails).
+const MATCHUPS = [
+  { a: "chatgpt",    b: "claude",         labelA: "ChatGPT",    labelB: "Claude",        category: "Chat assistants" },
+  { a: "cursor",     b: "github-copilot", labelA: "Cursor",     labelB: "GitHub Copilot", category: "Coding & dev" },
+  { a: "midjourney", b: "runway",         labelA: "Midjourney", labelB: "Runway",        category: "Image & video" },
+];
+
+const CHAT_PROMPTS = [
+  "What's the best AI coding assistant?",
+  "Compare free AI image generators",
+  "Best AI tools for writing and editing",
+  "Which AI tools have a generous free tier?",
 ];
 
 const howItWorks = [
@@ -141,6 +174,130 @@ function ToolCardSkeleton() {
         <Skeleton className="h-5 w-10 rounded-full" />
       </div>
     </div>
+  );
+}
+
+function MatchupSide({ tool, label }: { tool: SpotlightTool | undefined; label: string }) {
+  const name = tool?.name ?? label;
+  return (
+    <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+      <div className="w-12 h-12 rounded-xl bg-surface-2 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+        {tool?.logo_url ? (
+          <img src={tool.logo_url} alt={name} className="w-full h-full object-contain p-1.5" />
+        ) : (
+          <span className="text-base font-bold text-text-muted">{name.charAt(0)}</span>
+        )}
+      </div>
+      <span className="text-sm font-semibold text-text text-center leading-tight truncate max-w-full">{name}</span>
+    </div>
+  );
+}
+
+function CompareSpotlight() {
+  const { data: toolMap } = useQuery({
+    queryKey: ["spotlight-tools"],
+    queryFn: fetchSpotlightTools,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return (
+    <section className="container pb-14">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-xl font-bold text-text">Compare head-to-head</h2>
+          <p className="text-sm text-text-muted mt-0.5">Settle the debate with structured, side-by-side data</p>
+        </div>
+        <Link to="/compare" className="text-sm text-accent hover:underline flex items-center gap-1">
+          Compare any tools <ArrowRight size={13} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {MATCHUPS.map((m) => (
+          <Link
+            key={`${m.a}-${m.b}`}
+            to={`/compare?tools=${m.a},${m.b}`}
+            className="group relative flex flex-col items-center gap-4 p-5 rounded-xl border border-border bg-surface hover:bg-surface-2 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/20 transition-all duration-200"
+          >
+            <span className="text-[11px] font-medium uppercase tracking-wide text-text-subtle">{m.category}</span>
+            <div className="flex items-center gap-3 w-full">
+              <MatchupSide tool={toolMap?.get(m.a)} label={m.labelA} />
+              <div
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/8 border border-accent/20 text-[11px] font-bold text-accent flex-shrink-0 transition-shadow group-hover:shadow-[0_0_16px_color-mix(in_srgb,var(--accent)_35%,transparent)]"
+                aria-hidden="true"
+              >
+                VS
+              </div>
+              <MatchupSide tool={toolMap?.get(m.b)} label={m.labelB} />
+            </div>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-text-muted group-hover:text-accent transition-colors">
+              <GitCompare size={13} /> View comparison
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChatTeaser() {
+  const navigate = useNavigate();
+
+  function handleAsk(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim();
+    navigate(q ? `/chat?q=${encodeURIComponent(q)}` : "/chat");
+  }
+
+  return (
+    <section className="container pb-14">
+      <div
+        className="rounded-2xl border border-border p-6 sm:p-9 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--surface)), color-mix(in srgb, var(--accent-2) 6%, var(--surface)))" }}
+      >
+        <div className="pointer-events-none absolute inset-0 -z-0" aria-hidden="true">
+          <div className="absolute right-[-10%] top-[-30%] w-[420px] h-[260px] rounded-full opacity-[0.1] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,transparent_70%)]" />
+        </div>
+        <div className="relative z-10 max-w-2xl mx-auto text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 p-2 mb-4">
+            <img src="/logo.png" alt="AI Wiki" className="w-full h-full object-contain" />
+          </div>
+          <h2 className="text-2xl font-bold text-text mb-2">Not sure where to start? Ask AI Wiki</h2>
+          <p className="text-sm text-text-muted mb-6 leading-relaxed max-w-lg mx-auto">
+            Describe your use case in plain English and our RAG-powered assistant recommends tools
+            from the directory — with citations you can dig into.
+          </p>
+
+          <form onSubmit={handleAsk} className="relative max-w-lg mx-auto mb-5">
+            <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none" />
+            <input
+              name="q"
+              type="text"
+              placeholder="e.g. Best AI tool for editing podcasts on a budget…"
+              className="w-full pl-10 pr-14 py-3.5 rounded-xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
+            />
+            <button
+              type="submit"
+              aria-label="Ask AI Wiki"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-accent text-accent-fg hover:opacity-90 transition-opacity"
+            >
+              <Send size={15} />
+            </button>
+          </form>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {CHAT_PROMPTS.map((prompt) => (
+              <Link
+                key={prompt}
+                to={`/chat?q=${encodeURIComponent(prompt)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 hover:bg-surface-2 transition-colors"
+              >
+                <Sparkles size={12} className="text-accent" /> {prompt}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -347,6 +504,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Ask AI Wiki teaser ────────────────────────────────────────────── */}
+      <ChatTeaser />
+
       {/* ── Featured tools ────────────────────────────────────────────────── */}
       <section className="container pb-14">
         <div className="flex items-center justify-between mb-5">
@@ -368,6 +528,9 @@ export default function Home() {
           }
         </div>
       </section>
+
+      {/* ── Compare spotlight ─────────────────────────────────────────────── */}
+      <CompareSpotlight />
 
       {/* ── Category grid ─────────────────────────────────────────────────── */}
       <section className="container pb-14">

@@ -139,9 +139,11 @@ interface ChatInterfaceProps {
   sessionId: string | null;
   /** Called when a new session is created via the first message send. */
   onSessionChange?: (id: string) => void;
+  /** Prompt to auto-send once on mount for a fresh session (e.g. deep-linked from /chat?q=…). */
+  initialPrompt?: string;
 }
 
-export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: ChatInterfaceProps) {
+export function ChatInterface({ sessionId: initialSessionId, onSessionChange, initialPrompt }: ChatInterfaceProps) {
   const { user } = useCurrentUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -160,6 +162,9 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
   // auto-created mid-stream, initialSessionId changes via prop but we must NOT
   // reload history — that would overwrite the in-flight streaming messages.
   const sessionIdAtMount = useRef(initialSessionId);
+
+  // Guard so a deep-linked initialPrompt is auto-sent exactly once.
+  const initialPromptSent = useRef(false);
 
   // ── Load historical session on mount ───────────────────────────────────────
   useEffect(() => {
@@ -357,6 +362,17 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange }: 
       inputRef.current?.focus();
     }
   };
+
+  // ── Auto-send a deep-linked prompt on mount (fresh session only) ────────────
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fires once via ref guard
+  useEffect(() => {
+    if (initialPromptSent.current) return;
+    if (sessionIdAtMount.current) return; // never inject into a historical session
+    const prompt = initialPrompt?.trim();
+    if (!prompt) return;
+    initialPromptSent.current = true;
+    sendMessage(prompt);
+  }, [initialPrompt]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

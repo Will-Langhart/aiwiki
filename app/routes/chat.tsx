@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { PanelLeftOpen } from "lucide-react";
 import type { Route } from "./+types/chat";
@@ -15,6 +16,11 @@ export function meta(_: Route.MetaArgs) {
 
 export default function ChatPage() {
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+
+  // A prompt deep-linked from the landing page teaser (/chat?q=…). Captured once
+  // on first render so it auto-starts a single conversation, then is ignored.
+  const [initialPrompt] = useState<string>(() => searchParams.get("q")?.trim() ?? "");
 
   // Track which session is active (null = fresh/new chat)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -77,6 +83,7 @@ export default function ChatPage() {
           key={navigationKey}
           sessionId={activeSessionId}
           onSessionChange={handleSessionChange}
+          initialPrompt={navigationKey === "new" ? initialPrompt : undefined}
         />
       </div>
     </div>
