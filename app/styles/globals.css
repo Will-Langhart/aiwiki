@@ -75,6 +75,16 @@
     linear-gradient(to bottom, color-mix(in srgb, var(--accent) 3%, var(--bg)), var(--bg) 45%);
 }
 
+/* Isolate the animated hero backdrop onto its own compositor layer. Its star
+   layers animate continuously; without isolation those repaints invalidate the
+   scrolling page content and stutter the scroll. `contain: paint` + a promoted
+   layer confine the repaints so the rest of the hero scrolls smoothly. */
+.hero-bg {
+  transform: translateZ(0);
+  will-change: transform;
+  contain: paint;
+}
+
 /* ─── Base layer overrides ────────────────────────────────────────────────── */
 @layer base {
   *,
@@ -180,7 +190,8 @@
    The track holds two copies of the list; translating by -50% loops seamlessly.
    Hovering pauses it so users can read/click a tool. */
 @keyframes marquee-scroll { to { transform: translate3d(-50%, 0, 0); } }
-.animate-marquee {
+.animate-marquee,
+.animate-marquee-reverse {
   animation: marquee-scroll 45s linear infinite;
   /* Promote the moving track to its own GPU layer so the animation runs on the
      compositor and never repaints during vertical page scroll. */
@@ -188,6 +199,7 @@
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
 }
+.animate-marquee-reverse { animation-direction: reverse; }
 .marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
@@ -204,5 +216,6 @@
   .galaxy-nebula,
   .galaxy-shoot,
   .hero-gradient-text,
-  .animate-marquee { animation: none; }
+  .animate-marquee,
+  .animate-marquee-reverse { animation: none; }
 }

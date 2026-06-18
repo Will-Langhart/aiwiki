@@ -223,6 +223,38 @@ function StatStrip({ stats }: { stats: SiteStats | undefined }) {
   );
 }
 
+function MarqueeRow({ items, reverse = false, duration }: { items: MarqueeLogo[]; reverse?: boolean; duration: number }) {
+  const row = [...items, ...items]; // duplicate for a seamless -50% loop
+  return (
+    <div className="marquee-mask overflow-hidden">
+      <div
+        className={`flex w-max gap-3 hover:[animation-play-state:paused] ${reverse ? "animate-marquee-reverse" : "animate-marquee"}`}
+        style={{ animationDuration: `${duration}s` }}
+      >
+        {row.map((t, i) => (
+          <Link
+            key={`${t.slug}-${i}`}
+            to={`/tools/${t.slug}`}
+            title={t.name}
+            className="group flex items-center gap-2.5 px-4 py-2 flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity"
+          >
+            <img
+              src={t.logo_url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-8 h-8 object-contain rounded-md transition-transform duration-200 group-hover:scale-110"
+            />
+            <span className="text-sm font-medium text-text-muted group-hover:text-text whitespace-nowrap transition-colors">
+              {t.name}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LogoMarquee() {
   const { data: logos = [] } = useQuery({
     queryKey: ["marquee-logos"],
@@ -230,29 +262,16 @@ function LogoMarquee() {
     staleTime: 10 * 60 * 1000,
   });
   if (logos.length < 8) return null;
-  const row = [...logos, ...logos]; // duplicate for seamless -50% loop
+  const mid = Math.ceil(logos.length / 2);
+  const topRow = logos.slice(0, mid);
+  const bottomRow = logos.slice(mid);
   return (
-    <div className="mt-12">
-      <p className="text-center text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-4">
+    <div className="mt-12 space-y-3">
+      <p className="text-center text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-5">
         Indexing the tools practitioners actually use
       </p>
-      <div className="marquee-mask overflow-hidden">
-        <div className="flex w-max gap-2.5 animate-marquee hover:[animation-play-state:paused]">
-          {row.map((t, i) => (
-            <Link
-              key={`${t.slug}-${i}`}
-              to={`/tools/${t.slug}`}
-              title={t.name}
-              className="group flex items-center gap-2 px-3.5 py-2 flex-shrink-0"
-            >
-              <img src={t.logo_url} alt="" loading="lazy" decoding="async" className="w-8 h-8 object-contain rounded-md" />
-              <span className="text-xs font-medium text-text-muted group-hover:text-text whitespace-nowrap transition-colors">
-                {t.name}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <MarqueeRow items={topRow} duration={48} />
+      {bottomRow.length >= 4 && <MarqueeRow items={bottomRow} reverse duration={58} />}
     </div>
   );
 }
@@ -429,7 +448,7 @@ export default function Home() {
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative isolate pt-14 pb-10 sm:pt-20 sm:pb-14 overflow-hidden">
         {/* Background: layered galaxy (parallax stars + nebula + shooting stars) + grid mesh */}
-        <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+        <div className="hero-bg pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           {/* Nebula color clouds — soft, off-center, blue/cyan, blended */}
           <div
             className="galaxy-nebula absolute inset-0 opacity-[0.18]"
@@ -579,7 +598,7 @@ export default function Home() {
               name="q"
               type="text"
               placeholder="Search tools, categories, use cases…"
-              className="w-full pl-11 pr-28 py-4 rounded-2xl border border-border bg-surface/90 backdrop-blur text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/35 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
+              className="w-full pl-11 pr-28 py-4 rounded-2xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/35 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
             />
             <button
               type="submit"
