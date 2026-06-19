@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
+    "prebuild": "tsx scripts/generate-sitemap.ts",
     "build": "react-router build",
+    "sitemap": "tsx scripts/generate-sitemap.ts",
     "preview": "react-router-serve ./build/server/index.js",
     "lint": "biome lint ./app ./supabase/functions",
     "format": "biome format --write ./app",

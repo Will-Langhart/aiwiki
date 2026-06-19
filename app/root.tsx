@@ -23,9 +23,16 @@ const queryClient = new QueryClient({
 });
 
 export function meta(_: Route.MetaArgs) {
+  // Sensible defaults for routes that don't export their own meta. Content
+  // routes (home, tools, tool pages) override this with page-specific tags.
   return [
-    { title: "AI Wiki" },
-    { name: "description", content: "Community-curated directory for AI tools." },
+    { title: "AI Wiki — Community-curated AI tool directory" },
+    { name: "description", content: "Community-curated directory and reference for AI tools." },
+    { property: "og:site_name", content: "AI Wiki" },
+    { property: "og:type", content: "website" },
+    { property: "og:image", content: "https://aiwiki.io/logo.png" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: "https://aiwiki.io/logo.png" },
   ];
 }
 

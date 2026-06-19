@@ -1,18 +1,31 @@
-import { useSearchParams } from "react-router";
+import { useSearchParams, useLoaderData } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Route } from "./+types/tools._index";
 import { supabase } from "@/lib/supabase.client";
+import { createBuildClient } from "@/lib/supabase.server";
 import { DirectoryGrid } from "@/components/directory/DirectoryGrid";
 import { FilterBar } from "@/components/directory/FilterBar";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
+import { baseMeta, jsonLd, breadcrumbLd } from "@/lib/seo";
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Browse AI Tools — AI Wiki" },
-    { name: "description", content: "Discover and compare the best AI tools. Filter by category, pricing, audience, and more." },
+    ...baseMeta({
+      title: "Browse AI Tools — AI Wiki",
+      description:
+        "Discover and compare the best AI tools. Filter by category, pricing, audience, and more across our community-curated directory.",
+      path: "/tools",
+    }),
+    jsonLd(
+      breadcrumbLd([
+        { name: "Home", path: "/" },
+        { name: "Tools", path: "/tools" },
+      ]),
+    ),
   ];
 }
 
@@ -48,23 +61,26 @@ interface Category {
   name: string;
 }
 
-async function fetchCategories(): Promise<Category[]> {
-  const { data } = await supabase
+async function fetchCategories(client: SupabaseClient): Promise<Category[]> {
+  const { data } = await client
     .from("categories")
     .select("id, slug, name")
     .order("sort_order");
   return data ?? [];
 }
 
-async function fetchTools(params: {
-  q: string;
-  cats: string[];
-  pricing: string[];
-  audiences: string[];
-  api: boolean | null;
-  oss: boolean | null;
-}): Promise<ToolResult[]> {
-  const { data, error } = await supabase.rpc("search_tools", {
+async function fetchTools(
+  client: SupabaseClient,
+  params: {
+    q: string;
+    cats: string[];
+    pricing: string[];
+    audiences: string[];
+    api: boolean | null;
+    oss: boolean | null;
+  },
+): Promise<ToolResult[]> {
+  const { data, error } = await client.rpc("search_tools", {
     query: params.q || undefined,
     cat_slugs: params.cats.length > 0 ? params.cats : undefined,
     pricing_tiers: params.pricing.length > 0 ? params.pricing : undefined,
@@ -76,6 +92,37 @@ async function fetchTools(params: {
   });
   if (error) throw new Error(error.message);
   return (data as ToolResult[]) ?? [];
+}
+
+const EMPTY_FILTERS = {
+  q: "",
+  cats: [] as string[],
+  pricing: [] as string[],
+  audiences: [] as string[],
+  api: null,
+  oss: null,
+} as const;
+
+interface DirectoryData {
+  categories: Category[];
+  tools: ToolResult[];
+}
+
+async function fetchDirectoryData(client: SupabaseClient): Promise<DirectoryData> {
+  const [categories, tools] = await Promise.all([
+    fetchCategories(client),
+    fetchTools(client, EMPTY_FILTERS),
+  ]);
+  return { categories, tools };
+}
+
+// Prerender the unfiltered directory so the full tool grid ships in static HTML.
+export async function loader(_: Route.LoaderArgs) {
+  return fetchDirectoryData(createBuildClient());
+}
+
+export async function clientLoader(_: Route.ClientLoaderArgs) {
+  return fetchDirectoryData(supabase);
 }
 
 export default function ToolsIndex() {
@@ -103,15 +150,27 @@ export default function ToolsIndex() {
     }
   }, [debouncedInput]);
 
+  const initial = useLoaderData<typeof loader>();
+  const noFilters =
+    !q &&
+    cats.length === 0 &&
+    pricing.length === 0 &&
+    audiences.length === 0 &&
+    api === null &&
+    oss === null;
+
   const { data: categories = [], isLoading: catsLoading } = useQuery({
     queryKey: ["categories"],
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(supabase),
+    initialData: initial.categories,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: tools = [], isLoading: toolsLoading } = useQuery({
     queryKey: ["tools", q, cats, pricing, audiences, api, oss],
-    queryFn: () => fetchTools({ q, cats, pricing, audiences, api, oss }),
+    queryFn: () => fetchTools(supabase, { q, cats, pricing, audiences, api, oss }),
+    // Seed only the unfiltered view (the prerendered canonical /tools page).
+    initialData: noFilters ? initial.tools : undefined,
     staleTime: 60 * 1000,
   });
 

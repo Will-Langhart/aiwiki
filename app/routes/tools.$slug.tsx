@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Outlet, useParams, NavLink, useNavigate } from "react-router";
+import { Outlet, NavLink, useNavigate, useLoaderData } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import type { MetaDescriptor } from "react-router";
 import type { Route } from "./+types/tools.$slug";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase.client";
+import { createBuildClient } from "@/lib/supabase.server";
 import { ToolHeader } from "@/components/tool/ToolHeader";
 import { ToolHero } from "@/components/tool/ToolHero";
 import { AudienceToggle } from "@/components/tool/AudienceToggle";
@@ -11,15 +14,15 @@ import { RatingDisplay } from "@/components/tool/RatingDisplay";
 import { RatingInput } from "@/components/tool/RatingInput";
 import { ReviewsList } from "@/components/tool/ReviewsList";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-
-export function meta({ params }: Route.MetaArgs) {
-  return [
-    { title: `${params.slug} — AI Wiki` },
-  ];
-}
+import {
+  baseMeta,
+  jsonLd,
+  softwareApplicationLd,
+  breadcrumbLd,
+  plainExcerpt,
+} from "@/lib/seo";
 
 interface FullTool {
   id: string;
@@ -67,17 +70,32 @@ interface UserRating {
   review_text: string | null;
 }
 
-interface ToolData {
+/** Public, prerenderable data for a tool page (no user-specific fields). */
+export interface ToolPublicData {
   tool: FullTool;
   blocks: ContentBlock[];
   categoryName: string | null;
-  isBookmarked: boolean;
   ratingStats: RatingStats;
+}
+
+interface UserToolData {
+  isBookmarked: boolean;
   userRating: UserRating | null;
 }
 
-async function fetchToolData(slug: string, userId?: string): Promise<ToolData | null> {
-  const { data: tool, error } = await supabase
+// ── Data loading ────────────────────────────────────────────────────────────
+
+/**
+ * Public tool data — runs at build time (prerender `loader`) and on client
+ * navigations (`clientLoader`). Returns null for unknown/unpublished slugs so
+ * the page can render a "not found" state instead of crashing.
+ */
+async function fetchToolPublicData(
+  client: SupabaseClient,
+  slug: string,
+): Promise<ToolPublicData | null> {
+  if (!slug) return null;
+  const { data: tool, error } = await client
     .from("tools")
     .select("*")
     .eq("slug", slug)
@@ -86,54 +104,139 @@ async function fetchToolData(slug: string, userId?: string): Promise<ToolData | 
 
   if (error || !tool) return null;
 
-  const [{ data: blocks }, { data: category }, { data: bookmark }, { data: ratingStats }, { data: userRating }] = await Promise.all([
-    supabase
-      .from("content_blocks")
-      .select("*")
-      .eq("tool_id", tool.id)
-      .order("sort_order"),
+  const [{ data: blocks }, { data: category }, { data: ratingStats }] = await Promise.all([
+    client.from("content_blocks").select("*").eq("tool_id", tool.id).order("sort_order"),
     tool.primary_category_id
-      ? supabase
-          .from("categories")
-          .select("name")
-          .eq("id", tool.primary_category_id)
-          .single()
+      ? client.from("categories").select("name").eq("id", tool.primary_category_id).single()
       : Promise.resolve({ data: null }),
-    userId
-      ? supabase
-          .from("bookmarks")
-          .select("tool_id")
-          .eq("tool_id", tool.id)
-          .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase
+    client
       .from("tool_rating_stats")
       .select("avg_stars, rating_count")
       .eq("tool_id", tool.id)
       .maybeSingle(),
-    userId
-      ? supabase
-          .from("ratings")
-          .select("stars, review_text")
-          .eq("tool_id", tool.id)
-          .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
   ]);
 
   return {
     tool: tool as FullTool,
     blocks: (blocks as ContentBlock[]) ?? [],
     categoryName: (category as { name: string } | null)?.name ?? null,
-    isBookmarked: !!bookmark,
     ratingStats: {
       avg_stars: (ratingStats as RatingStats | null)?.avg_stars ?? null,
       rating_count: (ratingStats as RatingStats | null)?.rating_count ?? 0,
     },
+  };
+}
+
+/** User-specific data (bookmark + own rating) — client-only, never prerendered. */
+async function fetchUserToolData(toolId: string, userId: string): Promise<UserToolData> {
+  const [{ data: bookmark }, { data: userRating }] = await Promise.all([
+    supabase
+      .from("bookmarks")
+      .select("tool_id")
+      .eq("tool_id", toolId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("ratings")
+      .select("stars, review_text")
+      .eq("tool_id", toolId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  return {
+    isBookmarked: !!bookmark,
     userRating: (userRating as UserRating | null) ?? null,
   };
 }
+
+// Build-time prerender of every published tool slug (server-only client).
+export async function loader({ params }: Route.LoaderArgs) {
+  return fetchToolPublicData(createBuildClient(), params.slug ?? "");
+}
+
+// Client-side navigations and revalidation (browser client; handles unknown slugs).
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  return fetchToolPublicData(supabase, params.slug ?? "");
+}
+
+// ── SEO ───────────────────────────────────────────────────────────────────────
+
+type ToolTab = "overview" | "docs" | "use-cases";
+
+/**
+ * Shared meta + JSON-LD builder for the tool layout and its tab routes. Child
+ * routes pull the parent loader data from `matches` and call this so every tab
+ * emits a complete, tab-specific set of head tags.
+ */
+export function buildToolMeta(data: ToolPublicData | null | undefined, tab: ToolTab): MetaDescriptor[] {
+  if (!data) {
+    return [{ title: "Tool not found — AI Wiki" }, { name: "robots", content: "noindex, follow" }];
+  }
+
+  const { tool, categoryName, ratingStats, blocks } = data;
+  const path = tab === "overview" ? `/tools/${tool.slug}` : `/tools/${tool.slug}/${tab}`;
+
+  const overviewExcerpt = plainExcerpt(
+    blocks.find((b) => b.section === "overview")?.body_md ?? "",
+    110,
+  );
+
+  const titleByTab: Record<ToolTab, string> = {
+    overview: `${tool.name} — ${tool.tagline} | AI Wiki`,
+    docs: `${tool.name} Documentation & Setup Guide | AI Wiki`,
+    "use-cases": `${tool.name} Use Cases & Examples | AI Wiki`,
+  };
+
+  const descByTab: Record<ToolTab, string> = {
+    overview: `${tool.tagline}. ${overviewExcerpt}`.trim().slice(0, 160),
+    docs: `How to use ${tool.name}: setup, configuration, and documentation. ${tool.tagline}`.slice(0, 160),
+    "use-cases": `Real-world use cases and examples for ${tool.name}. ${tool.tagline}`.slice(0, 160),
+  };
+
+  const tags = baseMeta({
+    title: titleByTab[tab],
+    description: descByTab[tab],
+    path,
+    image: tool.logo_url ?? undefined,
+    type: "article",
+  });
+
+  // Structured data: the tool itself + breadcrumb trail.
+  tags.push(
+    jsonLd(
+      softwareApplicationLd({
+        name: tool.name,
+        slug: tool.slug,
+        tagline: tool.tagline,
+        description: overviewExcerpt || tool.tagline,
+        logo_url: tool.logo_url,
+        category: categoryName,
+        pricing_tier: tool.pricing_tier,
+        has_free_tier: tool.has_free_tier,
+        pricing_starts_at: tool.pricing_starts_at,
+        pricing_currency: tool.pricing_currency,
+        avg_stars: ratingStats.avg_stars,
+        rating_count: ratingStats.rating_count,
+      }),
+    ),
+    jsonLd(
+      breadcrumbLd([
+        { name: "Home", path: "/" },
+        { name: "Tools", path: "/tools" },
+        ...(categoryName ? [{ name: categoryName, path: "/tools" }] : []),
+        { name: tool.name, path: `/tools/${tool.slug}` },
+      ]),
+    ),
+  );
+
+  return tags;
+}
+
+export function meta({ data }: Route.MetaArgs) {
+  return buildToolMeta(data, "overview");
+}
+
+// ── UI ──────────────────────────────────────────────────────────────────────
 
 const TAB_LINKS = [
   { to: "", label: "Overview", end: true },
@@ -141,48 +244,28 @@ const TAB_LINKS = [
   { to: "use-cases", label: "Use Cases" },
 ];
 
-function ToolLayoutSkeleton() {
-  return (
-    <div className="container py-8 space-y-6">
-      <div className="flex items-start gap-4">
-        <Skeleton className="w-16 h-16 rounded-2xl" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-4 w-80" />
-        </div>
-      </div>
-      <Skeleton className="h-32 rounded-xl" />
-      <div className="flex gap-4">
-        {TAB_LINKS.map((t) => (
-          <Skeleton key={t.label} className="h-8 w-20 rounded-md" />
-        ))}
-      </div>
-      <Skeleton className="h-64 rounded-xl" />
-    </div>
-  );
-}
-
 export default function ToolLayout() {
-  const { slug } = useParams<{ slug: string }>();
+  const data = useLoaderData<typeof loader>();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [ratingOpen, setRatingOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["tool", slug, user?.id],
-    queryFn: () => fetchToolData(slug ?? "", user?.id),
-    enabled: !!slug,
+  const slug = data?.tool.slug;
+
+  // User-specific data loads client-side only — never blocks the static content.
+  const { data: userData } = useQuery({
+    queryKey: ["tool-user", data?.tool.id, user?.id],
+    queryFn: () => fetchUserToolData(data?.tool.id ?? "", user?.id ?? ""),
+    enabled: !!data?.tool.id && !!user?.id,
     staleTime: 60 * 1000,
   });
-
-  if (isLoading) return <ToolLayoutSkeleton />;
 
   if (!data) {
     return (
       <div className="container py-20 text-center">
         <p className="text-2xl font-bold text-text mb-2">Tool not found</p>
         <p className="text-text-muted text-sm mb-6">
-          The tool "{slug}" doesn't exist or hasn't been published yet.
+          This tool doesn't exist or hasn't been published yet.
         </p>
         <button
           type="button"
@@ -195,8 +278,10 @@ export default function ToolLayout() {
     );
   }
 
-  const { tool, blocks, categoryName, isBookmarked, ratingStats, userRating } = data;
-  const queryKey = ["tool", slug, user?.id];
+  const { tool, blocks, categoryName, ratingStats } = data;
+  const isBookmarked = userData?.isBookmarked ?? false;
+  const userRating = userData?.userRating ?? null;
+  const queryKey = ["tool-user", tool.id, user?.id];
 
   return (
     <div className="container py-6 space-y-6 max-w-5xl">

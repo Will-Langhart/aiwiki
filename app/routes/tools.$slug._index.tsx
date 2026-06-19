@@ -1,5 +1,7 @@
 import { useOutletContext } from "react-router";
+import type { Route } from "./+types/tools.$slug._index";
 import { ContentBlocks } from "@/components/tool/ContentBlocks";
+import { buildToolMeta, type ToolPublicData } from "./tools.$slug";
 
 interface OutletContext {
   blocks: Array<{
@@ -13,8 +15,9 @@ interface OutletContext {
   }>;
 }
 
-export function meta() {
-  return [{ title: "Overview" }];
+export function meta({ matches }: Route.MetaArgs) {
+  const parent = matches.find((m) => m?.id === "routes/tools.$slug");
+  return buildToolMeta(parent?.data as ToolPublicData | null, "overview");
 }
 
 export default function ToolOverview() {

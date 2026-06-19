@@ -1,24 +1,29 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLoaderData } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ArrowRight, Search, GitCompare, MessageSquare,
   Code2, Video, PenLine, BrainCircuit, Image, Mic,
   Workflow, BarChart3, Presentation, Database, ShoppingBag,
   Headphones, BookOpen, Sparkles, Send,
 } from "lucide-react";
+import type { Route } from "./+types/_index";
 import { supabase } from "@/lib/supabase.client";
+import { createBuildClient } from "@/lib/supabase.server";
 import { ToolCard } from "@/components/tool/ToolCard";
-import { Skeleton } from "@/components/ui/skeleton";
+import { baseMeta, jsonLd, websiteLd, organizationLd } from "@/lib/seo";
 
-export function meta() {
+export function meta(_: Route.MetaArgs) {
   return [
-    { title: "AI Wiki — Community-curated AI tool directory" },
-    {
-      name: "description",
-      content:
+    ...baseMeta({
+      title: "AI Wiki — Community-curated AI tool directory",
+      description:
         "Discover, compare, and learn about the best AI tools. Browse 190+ tools by category, compare side-by-side, and ask AI Wiki for recommendations.",
-    },
+      path: "/",
+    }),
+    jsonLd(websiteLd()),
+    jsonLd(organizationLd()),
   ];
 }
 
@@ -59,8 +64,8 @@ interface MarqueeLogo {
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-async function fetchFeaturedTools(): Promise<FeaturedTool[]> {
-  const { data, error } = await supabase.rpc("search_tools", {
+async function fetchFeaturedTools(client: SupabaseClient): Promise<FeaturedTool[]> {
+  const { data, error } = await client.rpc("search_tools", {
     page_size: 9,
     page_offset: 0,
   });
@@ -68,12 +73,35 @@ async function fetchFeaturedTools(): Promise<FeaturedTool[]> {
   return (data as FeaturedTool[]) ?? [];
 }
 
-async function fetchSiteStats(): Promise<SiteStats> {
+async function fetchSiteStats(client: SupabaseClient): Promise<SiteStats> {
   const [{ count: tool_count }, { count: category_count }] = await Promise.all([
-    supabase.from("tools").select("*", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("categories").select("*", { count: "exact", head: true }),
+    client.from("tools").select("*", { count: "exact", head: true }).eq("status", "published"),
+    client.from("categories").select("*", { count: "exact", head: true }),
   ]);
   return { tool_count: tool_count ?? 0, category_count: category_count ?? 0 };
+}
+
+interface HomeData {
+  featuredTools: FeaturedTool[];
+  stats: SiteStats;
+}
+
+async function fetchHomeData(client: SupabaseClient): Promise<HomeData> {
+  const [featuredTools, stats] = await Promise.all([
+    fetchFeaturedTools(client),
+    fetchSiteStats(client),
+  ]);
+  return { featuredTools, stats };
+}
+
+// Prerendered at build time so the featured-tools grid and stats ship in the
+// static HTML for crawlers.
+export async function loader(_: Route.LoaderArgs) {
+  return fetchHomeData(createBuildClient());
+}
+
+export async function clientLoader(_: Route.ClientLoaderArgs) {
+  return fetchHomeData(supabase);
 }
 
 async function fetchMarqueeLogos(): Promise<MarqueeLogo[]> {
@@ -276,25 +304,6 @@ function LogoMarquee() {
   );
 }
 
-function ToolCardSkeleton() {
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
-      <div className="flex items-start gap-3">
-        <Skeleton className="w-11 h-11 rounded-xl flex-shrink-0" />
-        <div className="flex-1 space-y-1.5">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-3 w-16" />
-        </div>
-      </div>
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-3/4" />
-      <div className="flex gap-2">
-        <Skeleton className="h-5 w-16 rounded-full" />
-        <Skeleton className="h-5 w-10 rounded-full" />
-      </div>
-    </div>
-  );
-}
 
 function MatchupSide({ tool, label }: { tool: SpotlightTool | undefined; label: string }) {
   const name = tool?.name ?? label;
@@ -423,18 +432,7 @@ function ChatTeaser() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate();
-
-  const { data: stats } = useQuery({
-    queryKey: ["site-stats"],
-    queryFn: fetchSiteStats,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: featuredTools = [], isLoading: toolsLoading } = useQuery({
-    queryKey: ["featured-tools-home"],
-    queryFn: fetchFeaturedTools,
-    staleTime: 2 * 60 * 1000,
-  });
+  const { featuredTools, stats } = useLoaderData<typeof loader>();
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -667,10 +665,9 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {toolsLoading
-            ? Array.from({ length: 9 }, (_, i) => `s${i}`).map((k) => <ToolCardSkeleton key={k} />)
-            : featuredTools.map((tool) => <ToolCard key={tool.id} tool={tool} />)
-          }
+          {featuredTools.map((tool) => (
+            <ToolCard key={tool.id} tool={tool} />
+          ))}
         </div>
       </section>
 
