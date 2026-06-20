@@ -271,7 +271,7 @@ function MarqueeRow({ items, reverse = false, duration }: { items: MarqueeLogo[]
               alt=""
               loading="lazy"
               decoding="async"
-              className="w-8 h-8 object-contain rounded-md transition-transform duration-200 group-hover:scale-110"
+              className="w-7 h-7 object-contain flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
             />
             <span className="text-sm font-medium text-text-muted group-hover:text-text whitespace-nowrap transition-colors">
               {t.name}
@@ -295,7 +295,11 @@ function LogoMarquee() {
   const bottomRow = logos.slice(mid);
   return (
     <div className="mt-12 space-y-3">
-      <p className="text-center text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-5">
+      <p className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-5">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+        </span>
         Indexing the tools practitioners actually use
       </p>
       <MarqueeRow items={topRow} duration={48} />
