@@ -190,36 +190,45 @@ export default function ToolsIndex() {
         </p>
       </div>
 
-      {/* Toolbar: search + filters grouped into one panel */}
-      <div className="rounded-xl border border-border bg-surface/60 backdrop-blur-sm p-4 sm:p-5 space-y-4 mb-6 shadow-sm">
+      {/* Toolbar: search + filters */}
+      <div className="relative rounded-xl border border-border bg-surface/60 backdrop-blur-sm p-4 sm:p-5 space-y-4 mb-6 shadow-sm overflow-hidden">
+        {/* Accent top border */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(to right, transparent, var(--accent) 30%, var(--accent) 70%, transparent)" }}
+        />
+
         {/* Search bar */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={16} />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-accent transition-colors pointer-events-none" size={16} />
           <Input
             type="search"
-            placeholder="Search tools, categories, use cases…"
+            placeholder="Search 463 AI tools by name, category, or use case…"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            className="pl-11 pr-10 h-11 text-sm bg-bg border-border focus:border-accent/60 transition-colors rounded-lg"
+            className="pl-11 pr-24 h-12 text-sm bg-bg border-border/70 focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all rounded-lg"
           />
-          {inputValue && (
-            <button
-              type="button"
-              onClick={() => {
-                setInputValue("");
-                const next = new URLSearchParams(searchParams);
-                next.delete("q");
-                setSearchParams(next, { replace: true });
-              }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {inputValue ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputValue("");
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("q");
+                  setSearchParams(next, { replace: true });
+                }}
+                className="text-text-muted hover:text-text transition-colors"
+              >
+                <X size={14} />
+              </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border/60 bg-surface text-[10px] text-text-subtle font-mono">
+                ⌘K
+              </kbd>
+            )}
+          </div>
         </div>
-
-        {/* Divider */}
-        <div className="h-px bg-border/60 -mx-1" />
 
         {/* Filter bar */}
         {!catsLoading && (
