@@ -1,0 +1,342 @@
+# ============================================================
+# Curated AI tool URLs — deduplicated against existing 281 tools
+# ~260 net-new tools organized by category
+# Paste batches of 20 into /admin/discover
+# At ~$0.04/tool and $5/day cap = ~125 tools/day
+# ============================================================
+
+# ============================================================
+# BATCH 1 — PRODUCTIVITY (20)
+# ============================================================
+https://fathom.video
+https://tldv.io
+https://granola.ai
+https://www.read.ai
+https://www.supernormal.com
+https://www.notta.ai
+https://www.sembly.ai
+https://www.limitless.ai
+https://getclockwise.com
+https://superhuman.com
+https://shortwave.com
+https://coda.io
+https://craft.do
+https://capacities.io
+https://obsidian.md
+https://roamresearch.com
+https://www.notion.so
+https://www.mem.ai
+https://logseq.com
+https://www.taskade.com
+
+# ============================================================
+# BATCH 2 — CUSTOMER SUPPORT (20)
+# ============================================================
+https://www.freshdesk.com
+https://www.zendesk.com
+https://www.kustomer.com
+https://www.gladly.com
+https://forethought.ai
+https://www.certainly.io
+https://www.boost.ai
+https://ultimate.ai
+https://www.cognigy.com
+https://capacity.com
+https://www.helpshift.com
+https://www.talkdesk.com
+https://www.nice.com
+https://www.genesys.com
+https://hiver.com
+https://comm100.com
+https://freshchat.com
+https://www.zoho.com/desk
+https://www.dixa.com
+https://www.assembled.com
+
+# ============================================================
+# BATCH 3 — EDUCATION (20)
+# ============================================================
+https://khanmigo.ai
+https://www.synthesis.com
+https://www.brilliant.org
+https://quizlet.com
+https://www.studysmarter.de
+https://www.explainpaper.com
+https://www.scholarcy.com
+https://www.humata.ai
+https://magicschool.ai
+https://photomath.com
+https://socratic.org
+https://nolej.io
+https://curipod.com
+https://teachfx.com
+https://diffit.me
+https://www.duolingo.com
+https://www.coursera.org
+https://www.khanacademy.org
+https://www.edx.org
+https://learnosity.com
+
+# ============================================================
+# BATCH 4 — NO-CODE & LOW-CODE (20)
+# ============================================================
+https://bubble.io
+https://www.webflow.com
+https://www.softr.io
+https://www.glideapps.com
+https://www.appsmith.com
+https://create.xyz
+https://www.dora.run
+https://www.typebot.io
+https://www.stack-ai.com
+https://botpress.com
+https://adalo.com
+https://www.weweb.io
+https://www.xano.com
+https://flutterflow.io
+https://www.bravostudio.app
+https://www.bildr.com
+https://www.pory.io
+https://www.noloco.io
+https://www.internal.io
+https://www.appgyver.com
+
+# ============================================================
+# BATCH 5 — SECURITY (20)
+# ============================================================
+https://wiz.io
+https://orca.security
+https://www.sentinelone.com
+https://www.crowdstrike.com
+https://www.darktrace.com
+https://www.vectra.ai
+https://snyk.io
+https://semgrep.dev
+https://aikido.dev
+https://socket.dev
+https://www.cycode.com
+https://apiiro.com
+https://legitsecurity.com
+https://www.checkmarx.com
+https://www.veracode.com
+https://www.sonatype.com
+https://www.lacework.com
+https://www.aquasec.com
+https://www.sysdig.com
+https://www.stackhawk.com
+
+# ============================================================
+# BATCH 6 — LEGAL & COMPLIANCE (20)
+# ============================================================
+https://www.harvey.ai
+https://spellbook.legal
+https://casetext.com
+https://www.luminance.com
+https://www.evisort.com
+https://ironcladapp.com
+https://contractbook.com
+https://juro.com
+https://www.robin.ai
+https://www.lexion.ai
+https://summize.com
+https://www.kirasystems.com
+https://www.henchman.io
+https://www.definely.com
+https://paxton.ai
+https://www.filevine.com
+https://www.clio.com
+https://www.everlaw.com
+https://www.litera.com
+https://www.onit.com
+
+# ============================================================
+# BATCH 7 — HR & RECRUITING (20)
+# ============================================================
+https://www.ashbyhq.com
+https://www.greenhouse.io
+https://www.lever.co
+https://www.paradox.ai
+https://hireez.com
+https://www.fetcher.ai
+https://dover.com
+https://screenloop.com
+https://www.hirevue.com
+https://eightfold.ai
+https://findem.ai
+https://gem.com
+https://beamery.com
+https://seekout.com
+https://karat.com
+https://www.metaview.ai
+https://humanly.io
+https://modernloop.io
+https://leena.ai
+https://www.lattice.com
+
+# ============================================================
+# BATCH 8 — HR PLATFORMS + FINANCE (20)
+# ============================================================
+https://www.rippling.com
+https://www.deel.com
+https://www.bamboohr.com
+https://www.workday.com
+https://zeni.ai
+https://www.pilot.com
+https://bench.co
+https://digits.com
+https://www.ramp.com
+https://vic.ai
+https://www.stampli.com
+https://www.spendesk.com
+https://www.airbase.com
+https://www.brex.com
+https://mercury.com
+https://alpha-sense.com
+https://www.mosaic.tech
+https://runwayfinancial.com
+https://www.cube.software
+https://www.finbox.io
+
+# ============================================================
+# BATCH 9 — FINANCE + HEALTHCARE (20)
+# ============================================================
+https://www.intuit.com
+https://sage.com
+https://www.kensho.com
+https://www.coupa.com
+https://www.tipalti.com
+https://nabla.com
+https://www.suki.ai
+https://www.nuance.com
+https://www.ambiencehealthcare.com
+https://www.abridge.com
+https://www.doximity.com
+https://www.recursion.com
+https://insilico.com
+https://www.atomwise.com
+https://www.schrodinger.com
+https://www.benchsci.com
+https://www.tempus.com
+https://www.pathai.com
+https://www.aidoc.com
+https://viz.ai
+
+# ============================================================
+# BATCH 10 — HEALTHCARE + BIOTECH (20)
+# ============================================================
+https://www.flatiron.com
+https://www.komodohealth.com
+https://www.syapse.com
+https://www.rxmd.com
+https://www.enlitic.com
+https://www.zebra-med.com
+https://deepscribe.ai
+https://www.stethi.com
+https://infermedica.com
+https://www.bioptimus.ai
+https://www.insitro.com
+https://www.exscientia.ai
+https://www.xtalpi.com
+https://www.vividly.life
+https://turquoise.health
+https://www.nference.com
+https://unlearn.ai
+https://www.mendel.ai
+https://www.scipher.com
+https://www.aria.ai
+
+# ============================================================
+# BATCH 11 — ADDITIONAL CODING TOOLS (20)
+# ============================================================
+https://www.coderabbit.ai
+https://swimm.io
+https://mintlify.com
+https://pieces.app
+https://www.safurai.com
+https://www.bloop.ai
+https://www.codacy.com
+https://www.codiga.io
+https://www.mutableai.com
+https://www.codemod.com
+https://www.refraction.dev
+https://www.usebraintrust.com
+https://www.augmentcode.com
+https://www.factory.ai
+https://www.cosine.sh
+https://www.plandex.ai
+https://www.sweep.dev
+https://www.gocharlie.ai
+https://www.sourcery.ai
+https://www.qodo.ai
+
+# ============================================================
+# BATCH 12 — ADDITIONAL WRITING & MARKETING (20)
+# ============================================================
+https://www.anyword.com
+https://www.hypotenuse.ai
+https://www.peppertype.ai
+https://www.phrasee.co
+https://www.persado.com
+https://www.smartly.io
+https://www.mutinyhq.com
+https://www.albert.ai
+https://www.pencil.li
+https://www.lately.ai
+https://www.postwise.ai
+https://www.taplio.com
+https://www.tribescaler.com
+https://www.contentfly.ai
+https://www.scalenut.com
+https://www.marketmuse.com
+https://www.clearscope.io
+https://www.surfer.com
+https://www.neuronwriter.com
+https://www.dashword.com
+
+# ============================================================
+# BATCH 13 — ADDITIONAL IMAGE & VIDEO (20)
+# ============================================================
+https://www.haiper.ai
+https://www.viggle.ai
+https://www.hedra.com
+https://fal.ai
+https://www.genmo.ai
+https://www.pixverse.ai
+https://www.vidu.studio
+https://www.wan.video
+https://www.minimax.io
+https://www.jogg.ai
+https://www.creatorkit.com
+https://www.topaz.ai
+https://www.remini.ai
+https://lensa.ai
+https://www.facetune.com
+https://prisma-ai.com
+https://www.aragon.ai
+https://www.headshotpro.com
+https://www.profile-picture.ai
+https://www.studio.d-id.com
+
+# ============================================================
+# BATCH 14 — ADDITIONAL INFRASTRUCTURE & MLOPS (20)
+# ============================================================
+https://www.determined.ai
+https://www.runpod.io
+https://www.cerebrium.ai
+https://www.dstack.ai
+https://www.skypilot.co
+https://www.truss.baseten.co
+https://www.lepton.ai
+https://www.mystic.ai
+https://www.beam.cloud
+https://www.jina.ai
+https://www.clarifai.com
+https://www.nyckel.com
+https://www.roboflow.com
+https://www.superannotate.com
+https://www.scale.com
+https://www.labelstudio.heartex.com
+https://www.dataloop.ai
+https://www.v7labs.com
+https://www.segments.ai
+https://www.diffgram.com

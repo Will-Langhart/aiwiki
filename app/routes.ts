@@ -34,6 +34,7 @@ export default [
     route("admin", "routes/admin._index.tsx"),
     route("admin/submissions", "routes/admin.submissions._index.tsx"),
     route("admin/submissions/:id", "routes/admin.submissions.$id.tsx"),
+    route("admin/discover", "routes/admin.discover.tsx"),
     route("admin/flags", "routes/admin.flags.tsx"),
     route("admin/tools/:slug/edit", "routes/admin.tools.$slug.edit.tsx"),
   ]),
