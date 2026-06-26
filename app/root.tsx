@@ -33,6 +33,7 @@ export function meta(_: Route.MetaArgs) {
     { property: "og:image", content: "https://aiwiki.io/logo.png" },
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:image", content: "https://aiwiki.io/logo.png" },
+    { name: "google-site-verification", content: "bwhz9Ebr4n0qYXizVjGpSdCUKvqfk5minsQFjQ1p7kQ" },
   ];
 }
 
