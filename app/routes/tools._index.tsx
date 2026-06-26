@@ -176,18 +176,36 @@ export default function ToolsIndex() {
 
   return (
     <div className="container py-8">
-      {/* Page header */}
-      <div className="mb-7 relative">
+      {/* Hero header */}
+      <div className="relative mb-8 rounded-2xl border border-border bg-surface/50 overflow-hidden px-6 py-12 text-center">
+        {/* Background radial glow */}
         <div
-          className="absolute -left-6 top-0 w-72 h-24 pointer-events-none opacity-[0.15]"
-          style={{ background: "radial-gradient(ellipse at left top, var(--accent), transparent 65%)" }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 70% 60% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%)" }}
         />
-        <h1 className="text-3xl font-bold text-text tracking-tight relative">
-          AI Tools Directory
-        </h1>
-        <p className="text-text-muted mt-1.5 relative">
-          Community-curated. Every workflow covered.
-        </p>
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)", backgroundSize: "32px 32px" }}
+        />
+        {/* Accent top line */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(to right, transparent, var(--accent) 30%, var(--accent) 70%, transparent)" }}
+        />
+
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-accent/25 bg-accent/8 text-accent text-xs font-medium mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            Community-curated directory
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-text tracking-tight">
+            AI Tools Directory
+          </h1>
+          <p className="text-text-muted mt-3 text-lg max-w-md mx-auto">
+            Every workflow covered. Find the right tool fast.
+          </p>
+        </div>
       </div>
 
       {/* Toolbar: search + filters */}
