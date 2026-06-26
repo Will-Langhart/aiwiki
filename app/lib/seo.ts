@@ -59,6 +59,7 @@ export function baseMeta({
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: image },
+    { name: "google-site-verification", content: "bwhz9Ebr4n0qYXizVjGpSdCUKvqfk5minsQFjQ1p7kQ" },
   ];
 
   if (noindex) {
