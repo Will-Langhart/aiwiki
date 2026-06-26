@@ -191,16 +191,16 @@ export default function ToolsIndex() {
       </div>
 
       {/* Toolbar: search + filters grouped into one panel */}
-      <div className="rounded-xl border border-border bg-surface/40 p-3 sm:p-4 space-y-3.5 mb-6">
+      <div className="rounded-xl border border-border bg-surface/60 backdrop-blur-sm p-4 sm:p-5 space-y-4 mb-6 shadow-sm">
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={15} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={16} />
           <Input
             type="search"
             placeholder="Search tools, categories, use cases…"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            className="pl-9 pr-9 h-10 bg-surface border-border focus:border-accent/50 transition-colors"
+            className="pl-11 pr-10 h-11 text-sm bg-bg border-border focus:border-accent/60 transition-colors rounded-lg"
           />
           {inputValue && (
             <button
@@ -211,12 +211,15 @@ export default function ToolsIndex() {
                 next.delete("q");
                 setSearchParams(next, { replace: true });
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
             >
               <X size={14} />
             </button>
           )}
         </div>
+
+        {/* Divider */}
+        <div className="h-px bg-border/60 -mx-1" />
 
         {/* Filter bar */}
         {!catsLoading && (

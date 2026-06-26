@@ -3,7 +3,8 @@ import {
   BrainCircuit, Code2, ImageIcon, Video, Headphones, PenLine,
   BookOpen, Presentation, Sparkles, BarChart3, Workflow,
   Database, Mic, Megaphone, Zap, GitFork, X, Layers, ListTodo, Cpu, HeadphonesIcon,
-  FlaskConical, Bot, Activity,
+  FlaskConical, Bot, Activity, LayoutDashboard, GraduationCap, Shield,
+  Scale, Users, Landmark, HeartPulse, Blocks, SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,16 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "mlops-training": FlaskConical,
   "agent-frameworks": Bot,
   "ai-observability": Activity,
+  // New categories
+  "productivity": LayoutDashboard,
+  "customer-support": HeadphonesIcon,
+  "education": GraduationCap,
+  "no-code": Blocks,
+  "security": Shield,
+  "legal": Scale,
+  "hr-recruiting": Users,
+  "finance": Landmark,
+  "healthcare": HeartPulse,
 };
 
 const PRICING_OPTIONS = [
@@ -120,75 +131,88 @@ export function FilterBar({ categories, resultCount, loading }: FilterBarProps) 
   };
 
   return (
-    <div className="space-y-2.5">
-      {/* Category pills */}
-      <div className="flex gap-1.5 flex-wrap">
-        <Pill
-          active={activeCats.length === 0}
-          onClick={() => {
-            const next = new URLSearchParams(searchParams);
-            next.delete("cat");
-            setSearchParams(next, { replace: true });
-          }}
-        >
-          All
-        </Pill>
-        {categories.map((cat) => {
-          const Icon = CATEGORY_ICONS[cat.slug] ?? Layers;
-          return (
-            <Pill
-              key={cat.slug}
-              active={activeCats.includes(cat.slug)}
-              onClick={() => toggleMulti("cat", cat.slug, activeCats)}
-            >
-              <Icon size={11} />
-              {cat.name}
-            </Pill>
-          );
-        })}
+    <div className="space-y-3">
+      {/* Section label + category pills */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-subtle select-none">
+            Category
+          </span>
+          <div className="flex-1 h-px bg-border/50" />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <Pill
+            active={activeCats.length === 0}
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("cat");
+              setSearchParams(next, { replace: true });
+            }}
+          >
+            All
+          </Pill>
+          {categories.map((cat) => {
+            const Icon = CATEGORY_ICONS[cat.slug] ?? Layers;
+            return (
+              <Pill
+                key={cat.slug}
+                active={activeCats.includes(cat.slug)}
+                onClick={() => toggleMulti("cat", cat.slug, activeCats)}
+              >
+                <Icon size={11} />
+                {cat.name}
+              </Pill>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Pricing + features + count */}
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: filter pills */}
-        <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-          {PRICING_OPTIONS.map((opt) => (
-            <Pill
-              key={opt.value}
-              active={activePricing.includes(opt.value)}
-              onClick={() => toggleMulti("pricing", opt.value, activePricing)}
-            >
-              {opt.label}
-            </Pill>
-          ))}
-
-          <div className="w-px h-4 bg-border/60 mx-0.5 self-center" />
-
-          <Pill active={hasApi} onClick={() => toggleBool("api", hasApi)}>
-            <Zap size={10} />
-            Has API
-          </Pill>
-
-          <Pill active={hasOss} onClick={() => toggleBool("oss", hasOss)}>
-            <GitFork size={10} />
-            Open Source
-          </Pill>
-        </div>
-
-        {/* Right: count + clear — never wraps */}
-        <div className="flex items-center gap-3 shrink-0">
+      {/* Section label + pricing/features + count */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-subtle select-none">
+            <SlidersHorizontal size={10} className="inline mr-1 -mt-px" />
+            Filters
+          </span>
+          <div className="flex-1 h-px bg-border/50" />
           {hasFilters && (
             <button
               type="button"
               onClick={clearAll}
-              className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors"
+              className="flex items-center gap-1 text-[10px] font-medium text-accent hover:text-accent/70 transition-colors"
             >
-              <X size={11} />
-              Clear
+              <X size={10} />
+              Clear all
             </button>
           )}
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+            {PRICING_OPTIONS.map((opt) => (
+              <Pill
+                key={opt.value}
+                active={activePricing.includes(opt.value)}
+                onClick={() => toggleMulti("pricing", opt.value, activePricing)}
+              >
+                {opt.label}
+              </Pill>
+            ))}
+
+            <div className="w-px h-4 bg-border/60 mx-0.5 self-center" />
+
+            <Pill active={hasApi} onClick={() => toggleBool("api", hasApi)}>
+              <Zap size={10} />
+              Has API
+            </Pill>
+
+            <Pill active={hasOss} onClick={() => toggleBool("oss", hasOss)}>
+              <GitFork size={10} />
+              Open Source
+            </Pill>
+          </div>
+
           {!loading && (
-            <span className="text-xs text-text-subtle tabular-nums">
+            <span className="shrink-0 text-xs font-medium tabular-nums px-2.5 py-1 rounded-full bg-surface border border-border text-text-muted">
               {resultCount.toLocaleString()} tool{resultCount !== 1 ? "s" : ""}
             </span>
           )}
