@@ -3,6 +3,27 @@
 ## Goal
 Drive early user growth before launch by optimizing activation, building distribution loops, and improving conversion.
 
+## Current State
+- Vercel Analytics is already integrated.
+- Next step is using that foundation to drive product decisions with a tighter growth loop.
+
+## 0) Analytics Hardening (Week 0)
+**Objective:** Turn existing analytics into actionable growth signal before feature work ramps.
+
+- Define and standardize event names for key funnel actions.
+- Ensure events include useful dimensions (route, referrer channel, category/tag context, signed-in status).
+- Create one shared growth dashboard for weekly review.
+
+**Core event set:**
+- `landing_view`
+- `tool_view`
+- `compare_click`
+- `save_click`
+- `follow_click`
+- `signup_start`
+- `signup_complete`
+- `return_visit_7d`
+
 ## 1) Activation Loop (Weeks 1-2)
 **Objective:** Help new visitors reach value in under 60 seconds.
 
@@ -51,6 +72,11 @@ Track this core funnel:
 
 Prioritize the highest-dropoff step first each sprint.
 
+Because Vercel Analytics is already in place, focus on:
+- Funnel conversion by source (organic, direct, referral, social)
+- New vs returning performance
+- Category-level intent (which topics convert best)
+
 ## Suggested Execution Rhythm
 - **Weekly:** Review funnel dropoff + choose one bottleneck to improve.
 - **Biweekly:** Ship one activation improvement + one distribution improvement.
@@ -65,3 +91,20 @@ Prioritize the highest-dropoff step first each sprint.
 - Save/follow actions gated by lightweight signup prompt
 - Followed-topic notification flow
 - Funnel analytics dashboard (landing -> tool view -> action -> signup -> return)
+
+## Build-Next Backlog (Execution-Ready)
+### P0 (Do first)
+- Instrument and validate the core event set above in all key routes.
+- Ship homepage hero + CTA A/B test focused on "find the right tool fast."
+- Add first-visit onboarding (3-5 interest choices) and feed recommendations instantly.
+- Implement soft signup wall only after high-intent actions (save/follow), not on first page view.
+
+### P1 (Do next)
+- Launch SEO-focused comparison and category pages with internal linking.
+- Add shareable public lists with strong Open Graph cards.
+- Add follow-category notifications (batched digest format).
+
+### P2 (Then optimize)
+- Improve recommendation quality using interaction history.
+- Introduce programmatic landing pages for high-intent long-tail queries.
+- Add referral loop incentives for list sharing.
