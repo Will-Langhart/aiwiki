@@ -1144,7 +1144,42 @@ Edge Function `moderate-comment`:
 - If `is_spam || is_abusive`, sets `comments.status = 'hidden'` automatically and notifies admin
 - Logs to `llm_usage`
 
-### 10.6 LLM cost guardrails
+### 10.6 Enrichment pipeline (multi-agent, LangGraph) — **foundational addition**
+
+> ⚠️ **This introduces two things the rest of the stack deliberately avoided: a
+> second runtime (Python) and an LLM orchestration framework (LangGraph).** It is
+> scoped strictly to the offline enrichment path — chat and all interactive
+> surfaces stay on the hand-rolled Deno/Anthropic approach. Rationale: the
+> directory's entire value is *accurate* tool data, and single-shot extraction
+> fabricates facts. Accuracy is worth the added infra here and nowhere else yet.
+
+Lives in `services/enrichment/` (not an Edge Function). Replaces the single
+Claude call in `discover-tools` / `url-to-draft` with a state graph:
+
+```
+ingest → extract → categorize → verify → write → critique ──(retry ≤2)──┐
+                                                                         │
+                                                                    persist(draft)
+```
+
+- **Grounding:** `ingest` pulls homepage + `/pricing` + the **GitHub API** (real
+  stars/license/founding year) instead of only the homepage.
+- **Evidence gating (the anti-fabrication core):** every extracted fact carries a
+  verbatim `evidence` quote; `verify` nulls any fact with missing/low-confidence
+  evidence or whose quote isn't found in the sources. The writer only sees
+  survivors, so prose can't reintroduce a stripped claim. `critique` re-audits
+  the prose against the fact sheet and loops back to `write`.
+- **Output:** always writes `tools.status = 'draft'` + `content_blocks`, with an
+  `enrichment_jobs` row in `needs_review`. **Never auto-publishes** — an admin
+  approves. Trigger: Supabase DB webhook on `enrichment_jobs` insert → Vercel
+  Python function (Fluid Compute, 300s timeout, one tool per invocation).
+- **Cost:** each node logs `llm_usage` under a per-node feature
+  (`enrich_extract`/`enrich_categorize`/`enrich_verify`/`enrich_write`/`enrich_critique`,
+  added to the check constraint in migration `0024`) and respects the daily cap.
+- **Rollout:** shadow mode first — enrich into drafts and diff facts against
+  `discover-tools` output; cut over once `verify` measurably catches fabrications.
+
+### 10.7 LLM cost guardrails
 
 - `llm_usage` table tracks every call with input/output tokens and computed cost
 - Daily admin dashboard widget: total spend by feature for last 7/30 days

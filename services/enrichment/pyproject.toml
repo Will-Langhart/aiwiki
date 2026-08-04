@@ -1,0 +1,35 @@
+[project]
+name = "aiwiki-enrichment"
+version = "0.1.0"
+description = "Multi-agent tool-enrichment pipeline for AI Wiki (LangGraph)"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.7",
+    "httpx>=0.27",
+    "supabase>=2.6",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# LangSmith tracing is free to bolt on; enable with LANGCHAIN_TRACING_V2=true
+trace = ["langsmith>=0.1"]
+
+[project.scripts]
+enrich = "enrichment.run_local:main"
+shadow = "enrichment.shadow_diff:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["enrichment"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
