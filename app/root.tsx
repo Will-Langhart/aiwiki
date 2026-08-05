@@ -7,6 +7,7 @@ import {
   isRouteErrorResponse,
 } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import type { Route } from "./+types/root";
 import "./styles/globals.css";
 
@@ -73,6 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );
