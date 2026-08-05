@@ -19,6 +19,16 @@ const MAX_AGENT_ITERATIONS = 3;
 const AUTHED_LIMIT = 50;
 const ANON_LIMIT = 5;
 
+// Salted SHA-256 of the client IP — we rate-limit anonymous traffic by IP but
+// never store the raw address. Salt is optional; a constant default is fine
+// since the hash only ever needs to be stable within a single day's counting.
+async function hashIp(ip: string): Promise<string> {
+  const salt = Deno.env.get("ANON_IP_SALT") ?? "aiwiki-anon-chat";
+  const bytes = new TextEncoder().encode(`${salt}:${ip}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function embedQuery(text: string): Promise<number[]> {
   const res = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",
@@ -136,6 +146,13 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
 
+    // Client IP for anonymous rate limiting. Behind Supabase's proxy the real
+    // client is the first hop in x-forwarded-for; fall back to cf-connecting-ip.
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "unknown";
+
     // Use service role for admin DB ops; anon key for user-scoped checks
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -178,6 +195,22 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: `Daily limit of ${AUTHED_LIMIT} messages reached.` }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    } else {
+      // Anonymous: enforce a per-IP daily cap so one client can't drain the
+      // shared budget. bump_anon_chat_usage increments and returns the new
+      // count atomically. If it errors (e.g. migration not yet applied), fail
+      // open — the global cost cap below still bounds total spend.
+      const ipHash = await hashIp(clientIp);
+      const { data: anonCount, error: anonErr } = await supabaseAdmin.rpc(
+        "bump_anon_chat_usage",
+        { p_ip_hash: ipHash },
+      );
+      if (!anonErr && typeof anonCount === "number" && anonCount > ANON_LIMIT) {
+        return new Response(
+          JSON.stringify({ error: `Daily limit of ${ANON_LIMIT} messages reached. Sign in for more.` }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
     }
 
