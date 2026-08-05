@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, RotateCcw, ArrowDown } from "lucide-react";
+import { Link } from "react-router";
+import type { Components } from "react-markdown";
+import { Send, RotateCcw, ArrowDown, Square, Copy, Check, RefreshCw, Search } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
@@ -26,6 +28,8 @@ interface Message {
   citations?: CitedTool[];
   streaming?: boolean;
   error?: boolean;
+  /** True while the agent is running retrieval tools before any answer text. */
+  searching?: boolean;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -52,18 +56,63 @@ function AssistantBubble({
   citations,
   streaming,
   error,
+  searching,
+  isLast,
   onCitationClick,
+  onRetry,
 }: {
   content: string;
   citations?: CitedTool[];
   streaming?: boolean;
   error?: boolean;
+  searching?: boolean;
+  isLast?: boolean;
   onCitationClick?: () => void;
+  onRetry?: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  // Inline [tool:slug] → clickable links to the tool page (slug is always known,
+  // so mentions are clickable even before the citation cards arrive).
   const displayContent = content.replace(/\[tool:([a-z0-9-]+)\]/g, (_, slug) => {
     const tool = citations?.find((t) => t.slug === slug);
-    return tool ? `**${tool.name}**` : `\`${slug}\``;
+    return `[${tool ? tool.name : slug}](/tools/${slug})`;
   });
+
+  // Human-readable text for the copy button (names, no link/marker syntax).
+  const copyText = content.replace(/\[tool:([a-z0-9-]+)\]/g, (_, slug) => {
+    const tool = citations?.find((t) => t.slug === slug);
+    return tool ? tool.name : slug;
+  });
+
+  // Render internal links as client-side <Link>s (and attribute the click);
+  // external links open in a new tab.
+  const mdComponents: Components = {
+    a: ({ href, children }) =>
+      href?.startsWith("/") ? (
+        <Link
+          to={href}
+          onClick={onCitationClick}
+          className="text-accent no-underline hover:underline font-medium"
+        >
+          {children}
+        </Link>
+      ) : (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      ),
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable — no-op
+    }
+  };
 
   return (
     <div className="flex gap-3 items-start">
@@ -72,13 +121,20 @@ function AssistantBubble({
       </div>
       <div className="flex-1 min-w-0 space-y-3">
         {!content && streaming ? (
-          <div className="flex items-center gap-2 text-sm text-text-muted py-1">
-            <span className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:0ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:150ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:300ms]" />
-            </span>
-          </div>
+          searching ? (
+            <div className="flex items-center gap-2 text-sm text-text-muted py-1">
+              <Search size={14} className="text-accent animate-pulse" />
+              <span>Searching the directory…</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-text-muted py-1">
+              <span className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:0ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-text-subtle animate-bounce [animation-delay:300ms]" />
+              </span>
+            </div>
+          )
         ) : (
           <div
             className={cn(
@@ -86,7 +142,7 @@ function AssistantBubble({
               error && "text-danger",
             )}
           >
-            <MarkdownRenderer content={displayContent} />
+            <MarkdownRenderer content={displayContent} components={mdComponents} />
             {streaming && (
               <span className="inline-block w-1.5 h-4 bg-accent ml-0.5 animate-pulse rounded-sm align-middle" />
             )}
@@ -98,6 +154,33 @@ function AssistantBubble({
             {citations.map((tool) => (
               <ToolCitationCard key={tool.id} tool={tool} onSelect={onCitationClick} />
             ))}
+          </div>
+        )}
+
+        {/* Action row — only on a settled message */}
+        {!streaming && content && (
+          <div className="flex items-center gap-3 text-xs text-text-subtle">
+            {!error && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 hover:text-text transition-colors"
+                aria-label="Copy response"
+              >
+                {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            )}
+            {isLast && error && onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex items-center gap-1 hover:text-text transition-colors"
+                aria-label="Retry"
+              >
+                <RefreshCw size={13} /> Retry
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -160,6 +243,9 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Abort the in-flight stream (Stop button); remember the last prompt for Retry.
+  const abortRef = useRef<AbortController | null>(null);
+  const lastPromptRef = useRef<{ text: string; source: ChatSource } | null>(null);
 
   // Capture the session ID that was present at mount time.
   // History should only load for sessions that existed BEFORE this component
@@ -278,6 +364,10 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInput("");
     setSending(true);
+    lastPromptRef.current = { text: text.trim(), source };
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -292,6 +382,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
           Authorization: authHeader,
         },
         body: JSON.stringify({ session_id: sessionId, message: text.trim() }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) {
@@ -299,7 +390,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
         let errMsg = `HTTP ${res.status}`;
         try { errMsg = JSON.parse(errJson).error ?? JSON.parse(errJson).message ?? errMsg; } catch { /* use status */ }
         setMessages((prev) =>
-          prev.map((m) => m.id === assistantMsg.id ? { ...m, content: errMsg, streaming: false, error: true } : m)
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, content: errMsg, streaming: false, searching: false, error: true } : m)
         );
         return;
       }
@@ -327,17 +418,22 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
               session_id?: string;
               tools?: CitedTool[];
               error?: string;
+              status?: string;
             };
 
             if (event.type === "session" && event.session_id) {
               const newId = event.session_id;
               setSessionId(newId);
               onSessionChange?.(newId);
+            } else if (event.type === "status" && event.status === "searching") {
+              setMessages((prev) =>
+                prev.map((m) => m.id === assistantMsg.id ? { ...m, searching: true } : m)
+              );
             } else if (event.type === "content_block_delta" && event.delta?.text) {
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantMsg.id
-                    ? { ...m, content: m.content + (event.delta?.text ?? "") }
+                    ? { ...m, content: m.content + (event.delta?.text ?? ""), searching: false }
                     : m
                 )
               );
@@ -365,16 +461,27 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
       }
 
       setMessages((prev) =>
-        prev.map((m) => m.id === assistantMsg.id ? { ...m, streaming: false } : m)
+        prev.map((m) => m.id === assistantMsg.id ? { ...m, streaming: false, searching: false } : m)
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Network error";
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsg.id ? { ...m, content: msg, streaming: false, error: true } : m
-        )
-      );
+      if ((err as { name?: string }).name === "AbortError") {
+        // User pressed Stop — keep whatever streamed so far, drop the spinner.
+        setMessages((prev) =>
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, streaming: false, searching: false } : m)
+        );
+      } else {
+        const msg = err instanceof Error ? err.message : "Network error";
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id
+              // Keep partial text if any arrived; only flag an error when empty.
+              ? { ...m, content: m.content || msg, streaming: false, searching: false, error: !m.content }
+              : m
+          )
+        );
+      }
     } finally {
+      abortRef.current = null;
       setSending(false);
       inputRef.current?.focus();
     }
@@ -402,6 +509,21 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
     setMessages([]);
     setSessionId(null);
     setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const stop = () => abortRef.current?.abort();
+
+  // Retry the last turn: drop the failed assistant + its user message, resend.
+  const retry = () => {
+    const last = lastPromptRef.current;
+    if (!last || sending) return;
+    setMessages((prev) => {
+      let end = prev.length;
+      if (end > 0 && prev[end - 1].role === "assistant") end -= 1;
+      if (end > 0 && prev[end - 1].role === "user") end -= 1;
+      return prev.slice(0, end);
+    });
+    sendMessage(last.text, last.source);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -437,7 +559,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
           </div>
         ) : (
           <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-            {messages.map((msg) =>
+            {messages.map((msg, i) =>
               msg.role === "user" ? (
                 <UserBubble key={msg.id} content={msg.content} />
               ) : (
@@ -447,7 +569,10 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
                   citations={msg.citations}
                   streaming={msg.streaming}
                   error={msg.error}
+                  searching={msg.searching}
+                  isLast={i === messages.length - 1}
                   onCitationClick={() => trackEvent("citation_click", { signed_in: !!user, source: "card" })}
+                  onRetry={retry}
                 />
               )
             )}
@@ -498,15 +623,27 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
               disabled={sending || loadingHistory}
               className="flex-1 resize-none bg-transparent py-1.5 text-sm text-text placeholder:text-text-subtle focus:outline-none overflow-y-auto min-w-0"
             />
-            <button
-              type="button"
-              onClick={() => sendMessage(input, "composer")}
-              disabled={!input.trim() || sending || loadingHistory}
-              className="p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-90 transition-all flex-shrink-0 mb-0.5"
-              aria-label="Send message"
-            >
-              <Send size={14} />
-            </button>
+            {sending ? (
+              <button
+                type="button"
+                onClick={stop}
+                className="p-1.5 rounded-lg bg-surface-2 text-text hover:bg-surface-2/70 transition-all flex-shrink-0 mb-0.5"
+                aria-label="Stop generating"
+                title="Stop generating"
+              >
+                <Square size={13} className="fill-current" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => sendMessage(input, "composer")}
+                disabled={!input.trim() || loadingHistory}
+                className="p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-90 transition-all flex-shrink-0 mb-0.5"
+                aria-label="Send message"
+              >
+                <Send size={14} />
+              </button>
+            )}
           </div>
         </div>
       </div>

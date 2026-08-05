@@ -17,6 +17,12 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 - **Wayfinding header on `/chat`.** The standalone chat route (outside AppShell)
   now has a minimal header — logo → home, Browse, Compare — so it is no longer a
   navigational dead-end.
+- **Chat trust & polish.** The assistant now shows a "Searching the directory…"
+  status while it runs retrieval (previously hidden behind a generic spinner);
+  inline tool mentions render as clickable links to the tool page (client-side
+  navigation, tracked as `citation_click`); and each answer gains Stop (cancel
+  streaming), Copy, and Retry (on error) controls. `MarkdownRenderer` gained an
+  optional `components` prop to support the client-side citation links.
 
 ### Changed
 

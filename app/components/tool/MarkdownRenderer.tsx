@@ -1,13 +1,15 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  /** Override element renderers (e.g. a custom `a` for client-side links). */
+  components?: Components;
 }
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className, components }: MarkdownRendererProps) {
   return (
     <div
       className={cn(
@@ -25,7 +27,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         className
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content}</ReactMarkdown>
     </div>
   );
 }
