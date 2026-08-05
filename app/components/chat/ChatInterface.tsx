@@ -4,6 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase.client";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
 import { ToolCitationCard } from "@/components/chat/ToolCitationCard";
+import { trackEvent, resolveChannel, type ChatSource } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -51,11 +52,13 @@ function AssistantBubble({
   citations,
   streaming,
   error,
+  onCitationClick,
 }: {
   content: string;
   citations?: CitedTool[];
   streaming?: boolean;
   error?: boolean;
+  onCitationClick?: () => void;
 }) {
   const displayContent = content.replace(/\[tool:([a-z0-9-]+)\]/g, (_, slug) => {
     const tool = citations?.find((t) => t.slug === slug);
@@ -93,7 +96,7 @@ function AssistantBubble({
         {citations && citations.length > 0 && !streaming && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {citations.map((tool) => (
-              <ToolCitationCard key={tool.id} tool={tool} />
+              <ToolCitationCard key={tool.id} tool={tool} onSelect={onCitationClick} />
             ))}
           </div>
         )}
@@ -141,9 +144,11 @@ interface ChatInterfaceProps {
   onSessionChange?: (id: string) => void;
   /** Prompt to auto-send once on mount for a fresh session (e.g. deep-linked from /chat?q=…). */
   initialPrompt?: string;
+  /** Attribution for an auto-sent initialPrompt (e.g. home_hero vs home_teaser). */
+  initialSource?: ChatSource;
 }
 
-export function ChatInterface({ sessionId: initialSessionId, onSessionChange, initialPrompt }: ChatInterfaceProps) {
+export function ChatInterface({ sessionId: initialSessionId, onSessionChange, initialPrompt, initialSource = "deep_link" }: ChatInterfaceProps) {
   const { user } = useCurrentUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -168,7 +173,8 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
 
   // ── Load historical session on mount ───────────────────────────────────────
   useEffect(() => {
-    if (!sessionIdAtMount.current) return;
+    const mountSessionId = sessionIdAtMount.current;
+    if (!mountSessionId) return;
 
     let cancelled = false;
     setLoadingHistory(true);
@@ -177,7 +183,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
       const { data: msgs } = await supabase
         .from("chat_messages")
         .select("id, role, content, tool_citations, created_at")
-        .eq("session_id", sessionIdAtMount.current!)
+        .eq("session_id", mountSessionId)
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -214,7 +220,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
       if (!cancelled) {
         setMessages(loaded);
         setLoadingHistory(false);
-        setSessionId(sessionIdAtMount.current!);
+        setSessionId(mountSessionId);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 0);
       }
     })();
@@ -256,8 +262,15 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
   const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 
   // ── Send message ────────────────────────────────────────────────────────────
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, source: ChatSource = "composer") => {
     if (!text.trim() || sending) return;
+
+    // Funnel events — counts/enums only, never the message text (privacy).
+    const priorUserMessages = messages.filter((m) => m.role === "user").length;
+    if (priorUserMessages === 0) {
+      trackEvent("chat_start", { channel: resolveChannel(), signed_in: !!user, source });
+    }
+    trackEvent("chat_message_sent", { signed_in: !!user, message_index: priorUserMessages });
 
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text.trim() };
     const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: "", streaming: true };
@@ -329,9 +342,13 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
                 )
               );
             } else if (event.type === "citations" && event.tools) {
+              const citedTools = event.tools;
               setMessages((prev) =>
-                prev.map((m) => m.id === assistantMsg.id ? { ...m, citations: event.tools } : m)
+                prev.map((m) => m.id === assistantMsg.id ? { ...m, citations: citedTools } : m)
               );
+              if (citedTools.length > 0) {
+                trackEvent("recommendation_shown", { signed_in: !!user, tool_count: citedTools.length });
+              }
             } else if (event.type === "error") {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -371,13 +388,13 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
     const prompt = initialPrompt?.trim();
     if (!prompt) return;
     initialPromptSent.current = true;
-    sendMessage(prompt);
+    sendMessage(prompt, initialSource);
   }, [initialPrompt]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      sendMessage(input, "composer");
     }
   };
 
@@ -410,7 +427,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
                 <button
                   key={prompt}
                   type="button"
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => sendMessage(prompt, "empty_state")}
                   className="text-left px-3.5 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-2 hover:border-accent/30 text-sm text-text-muted hover:text-text transition-all"
                 >
                   {prompt}
@@ -430,6 +447,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
                   citations={msg.citations}
                   streaming={msg.streaming}
                   error={msg.error}
+                  onCitationClick={() => trackEvent("citation_click", { signed_in: !!user, source: "card" })}
                 />
               )
             )}
@@ -482,7 +500,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
             />
             <button
               type="button"
-              onClick={() => sendMessage(input)}
+              onClick={() => sendMessage(input, "composer")}
               disabled={!input.trim() || sending || loadingHistory}
               className="p-1.5 rounded-lg bg-accent text-accent-fg disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-90 transition-all flex-shrink-0 mb-0.5"
               aria-label="Send message"

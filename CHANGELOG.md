@@ -5,6 +5,29 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Chat funnel analytics.** New typed, centralized analytics module
+  (`app/lib/analytics.ts`) wrapping Vercel Web Analytics custom events, with
+  privacy-preserving channel resolution (referrer host → enum; never PII, raw
+  referrer URLs, or free-form chat text). Instruments the chat surface:
+  `landing_view`, `chat_start` (attributed by entry source — home hero, teaser,
+  deep link, or composer), `chat_message_sent`, `recommendation_shown`, and
+  `citation_click` (chat → tool).
+- **Wayfinding header on `/chat`.** The standalone chat route (outside AppShell)
+  now has a minimal header — logo → home, Browse, Compare — so it is no longer a
+  navigational dead-end.
+
+### Changed
+
+- **Conversational-first home hero.** The hero input now seeds an AI Wiki
+  conversation (`/chat`) instead of a keyword search, and example-question chips
+  replace the old keyword chips — making the AI assistant the primary entry
+  point.
+- **Global nav on the landing page.** Browse / Compare / Ask AI are now shown on
+  the home page (previously hidden there), with "Ask AI" promoted as the primary
+  conversational call to action.
+
 ### Security
 
 - **Chat: enforce the anonymous rate limit.** The `chat` edge function declared

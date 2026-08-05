@@ -13,6 +13,8 @@ import { supabase } from "@/lib/supabase.client";
 import { createBuildClient } from "@/lib/supabase.server";
 import { ToolCard } from "@/components/tool/ToolCard";
 import { baseMeta, jsonLd, websiteLd, organizationLd } from "@/lib/seo";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { trackEvent, resolveChannel } from "@/lib/analytics";
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -152,13 +154,14 @@ const MATCHUPS = [
   { a: "midjourney", b: "runway",         labelA: "Midjourney", labelB: "Runway",        category: "Image & video" },
 ];
 
-// Quick-search chips shown under the hero search box.
-const SEARCH_SUGGESTIONS = [
-  "Image generation",
-  "Coding copilots",
-  "Free tier",
-  "Video editing",
-  "Open source",
+// Example questions shown under the hero — these seed a conversation, not a
+// keyword search (they deep-link into /chat).
+const HERO_PROMPTS = [
+  "Best AI coding assistant?",
+  "Free image generators",
+  "Tools with a generous free tier",
+  "Edit video with AI",
+  "Open-source models I can self-host",
 ];
 
 const CHAT_PROMPTS = [
@@ -377,7 +380,7 @@ function ChatTeaser() {
   function handleAsk(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim();
-    navigate(q ? `/chat?q=${encodeURIComponent(q)}` : "/chat");
+    navigate(q ? `/chat?q=${encodeURIComponent(q)}&src=home_teaser` : "/chat?src=home_teaser");
   }
 
   return (
@@ -420,7 +423,7 @@ function ChatTeaser() {
             {CHAT_PROMPTS.map((prompt) => (
               <Link
                 key={prompt}
-                to={`/chat?q=${encodeURIComponent(prompt)}`}
+                to={`/chat?q=${encodeURIComponent(prompt)}&src=home_teaser`}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 hover:bg-surface-2 transition-colors"
               >
                 <Sparkles size={12} className="text-accent" /> {prompt}
@@ -437,11 +440,19 @@ function ChatTeaser() {
 export default function Home() {
   const navigate = useNavigate();
   const { featuredTools, stats } = useLoaderData<typeof loader>();
+  const { user } = useCurrentUser();
 
-  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+  // Activation baseline: landing page became viewable.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fire once per mount
+  useEffect(() => {
+    trackEvent("landing_view", { channel: resolveChannel(), signed_in: !!user });
+  }, []);
+
+  // Conversational-first: the hero box seeds a chat, not a keyword search.
+  function handleAsk(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim();
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
+    navigate(q ? `/chat?q=${encodeURIComponent(q)}&src=home_hero` : "/chat?src=home_hero");
   }
 
   return (
@@ -594,33 +605,33 @@ export default function Home() {
             className="pointer-events-none absolute -inset-x-6 -inset-y-3 -z-10 opacity-60 blur-2xl"
             style={{ background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%)" }}
           />
-          <form onSubmit={handleSearch} className="relative group">
-            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle group-focus-within:text-accent transition-colors pointer-events-none" />
+          <form onSubmit={handleAsk} className="relative group">
+            <Sparkles size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle group-focus-within:text-accent transition-colors pointer-events-none" />
             <input
               name="q"
               type="text"
-              placeholder="Search tools, categories, use cases…"
+              placeholder="Ask AI Wiki — e.g. best tool for editing podcasts on a budget…"
               className="w-full pl-11 pr-28 py-4 rounded-2xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/35 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
             />
             <button
               type="submit"
               className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl bg-accent text-accent-fg text-xs font-semibold hover:opacity-90 transition-opacity shadow-[0_0_18px_color-mix(in_srgb,var(--accent)_35%,transparent)]"
             >
-              Search
+              Ask
             </button>
           </form>
         </div>
 
         {/* Quick-search chips */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-7">
-          <span className="text-xs text-text-subtle">Popular:</span>
-          {SEARCH_SUGGESTIONS.map((term) => (
+          <span className="text-xs text-text-subtle">Try:</span>
+          {HERO_PROMPTS.map((prompt) => (
             <Link
-              key={term}
-              to={`/search?q=${encodeURIComponent(term)}`}
+              key={prompt}
+              to={`/chat?q=${encodeURIComponent(prompt)}&src=home_hero`}
               className="px-2.5 py-1 rounded-full border border-border bg-surface/70 text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 hover:bg-surface transition-colors"
             >
-              {term}
+              {prompt}
             </Link>
           ))}
         </div>

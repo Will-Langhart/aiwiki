@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router";
-import { Moon, Sun, Search, Menu, X, Github } from "lucide-react";
+import { Moon, Sun, Search, Menu, X, Github, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { DensityProvider } from "@/lib/density";
@@ -137,8 +137,6 @@ function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { user } = useCurrentUser();
-  const { pathname } = useLocation();
-  const isLanding = pathname === "/";
 
   // Cmd+K / Ctrl+K global shortcut
   useEffect(() => {
@@ -167,31 +165,33 @@ function Nav() {
             <span className="tracking-tight">AI Wiki</span>
           </Link>
 
-          {/* Desktop nav links — hidden on the landing page */}
-          {!isLanding && (
-            <nav className="hidden md:flex items-center gap-0.5 text-sm">
-              {[
-                { to: "/tools", label: "Browse" },
-                { to: "/compare", label: "Compare" },
-                { to: "/chat", label: "Ask AI" },
-              ].map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    cn(
-                      "px-3 py-1.5 rounded-md transition-colors outline-none",
-                      isActive
-                        ? "text-text bg-surface-2 font-medium"
+          {/* Desktop nav links — always visible, incl. the landing page. Ask AI
+              is emphasized as the primary conversational entry point. */}
+          <nav className="hidden md:flex items-center gap-0.5 text-sm">
+            {[
+              { to: "/tools", label: "Browse", emphasis: false },
+              { to: "/compare", label: "Compare", emphasis: false },
+              { to: "/chat", label: "Ask AI", emphasis: true },
+            ].map(({ to, label, emphasis }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "px-3 py-1.5 rounded-md transition-colors outline-none inline-flex items-center gap-1.5",
+                    isActive
+                      ? "text-text bg-surface-2 font-medium"
+                      : emphasis
+                        ? "text-accent hover:bg-accent/10 font-medium"
                         : "text-text-muted hover:text-text hover:bg-surface-2"
-                    )
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
-            </nav>
-          )}
+                  )
+                }
+              >
+                {emphasis && <Sparkles size={13} />}
+                {label}
+              </NavLink>
+            ))}
+          </nav>
 
           {/* Right side actions */}
           <div className="flex items-center gap-1.5">
@@ -247,31 +247,27 @@ function Nav() {
         {/* Mobile nav */}
         {mobileOpen && (
           <div className="md:hidden border-t border-border bg-bg/95 backdrop-blur-md py-2 px-4 flex flex-col gap-0.5 text-sm">
-            {!isLanding && (
-              <>
-                <Link
-                  to="/tools"
-                  className="py-2.5 text-text-muted hover:text-text transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Browse
-                </Link>
-                <Link
-                  to="/compare"
-                  className="py-2.5 text-text-muted hover:text-text transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Compare
-                </Link>
-                <Link
-                  to="/chat"
-                  className="py-2.5 text-text-muted hover:text-text transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Ask AI
-                </Link>
-              </>
-            )}
+            <Link
+              to="/tools"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              Browse
+            </Link>
+            <Link
+              to="/compare"
+              className="py-2.5 text-text-muted hover:text-text transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              Compare
+            </Link>
+            <Link
+              to="/chat"
+              className="py-2.5 text-accent font-medium inline-flex items-center gap-1.5 transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              <Sparkles size={14} /> Ask AI
+            </Link>
             <Link
               to="/submit"
               className="py-2.5 text-text-muted hover:text-text transition-colors"

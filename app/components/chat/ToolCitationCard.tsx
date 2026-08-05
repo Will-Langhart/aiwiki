@@ -13,6 +13,8 @@ interface CitedTool {
 
 interface ToolCitationCardProps {
   tool: CitedTool;
+  /** Fired when the user clicks through to the tool page (chat → tool). */
+  onSelect?: () => void;
 }
 
 const PRICING_COLORS: Record<string, string> = {
@@ -22,10 +24,11 @@ const PRICING_COLORS: Record<string, string> = {
   enterprise: "bg-purple-500/10 text-purple-600 border-0",
 };
 
-export function ToolCitationCard({ tool }: ToolCitationCardProps) {
+export function ToolCitationCard({ tool, onSelect }: ToolCitationCardProps) {
   return (
     <Link
       to={`/tools/${tool.slug}`}
+      onClick={onSelect}
       className="flex items-start gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-2 transition-colors group"
     >
       {/* Logo */}
