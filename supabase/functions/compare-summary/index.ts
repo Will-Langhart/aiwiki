@@ -15,6 +15,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
     );
+    // RLS restricts comparisons/llm_usage writes (and llm_usage reads) to
+    // admins, so cache writes, usage logging, and the cost-cap check must use
+    // the service role.
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
     const { tool_slugs } = await req.json() as { tool_slugs: string[] };
     if (!tool_slugs || tool_slugs.length < 2) {
@@ -29,13 +36,20 @@ Deno.serve(async (req) => {
     // Check cache — if fresh (< 24h), stream cached text as single event
     const { data: cached } = await supabase
       .from("comparisons")
-      .select("ai_summary, last_generated_at")
+      .select("ai_summary, last_generated_at, view_count")
       .eq("slug", cacheSlug)
       .maybeSingle();
 
     if (cached?.ai_summary && cached.last_generated_at) {
       const age = Date.now() - new Date(cached.last_generated_at).getTime();
       if (age < 24 * 60 * 60 * 1000) {
+        // Count the view so popular combos surface in prerender/sitemap.
+        // Fire-and-forget; a lost increment under concurrency is acceptable.
+        admin
+          .from("comparisons")
+          .update({ view_count: (cached.view_count ?? 0) + 1 })
+          .eq("slug", cacheSlug)
+          .then(() => {});
         // Serve from cache as SSE
         const stream = new ReadableStream({
           start(controller) {
@@ -63,7 +77,7 @@ Deno.serve(async (req) => {
 
     // Daily cost cap check (global — not per-user for compare summaries)
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const { data: usageToday } = await supabase
+    const { data: usageToday } = await admin
       .from("llm_usage")
       .select("cost_usd")
       .eq("feature", "compare_summary")
@@ -79,7 +93,7 @@ Deno.serve(async (req) => {
     // Fetch tool data
     const { data: tools } = await supabase
       .from("tools")
-      .select("name, tagline, pricing_tier, has_free_tier, audience_fit, open_source, api_available, key_strengths")
+      .select("id, name, tagline, pricing_tier, has_free_tier, audience_fit, open_source, api_available, key_strengths")
       .in("slug", tool_slugs)
       .eq("status", "published");
 
@@ -128,16 +142,16 @@ Deno.serve(async (req) => {
 
         const usage = (await stream.finalMessage()).usage;
 
-        // Cache result
-        await supabase.from("comparisons").upsert({
+        // Cache result (tool_ids is uuid[] — use ids, not slugs)
+        await admin.from("comparisons").upsert({
           slug: cacheSlug,
-          tool_ids: (tools as { name: string }[]).map((_, i) => tool_slugs[i]),
+          tool_ids: (tools as { id: string }[]).map((t) => t.id),
           ai_summary: fullText,
           last_generated_at: new Date().toISOString(),
         });
 
         // Log usage
-        await supabase.from("llm_usage").insert({
+        await admin.from("llm_usage").insert({
           feature: "compare_summary",
           input_tokens: usage.input_tokens,
           output_tokens: usage.output_tokens,

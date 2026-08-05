@@ -2,6 +2,7 @@ import { useSearchParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Route } from "./+types/compare";
 import { supabase } from "@/lib/supabase.client";
+import { fetchToolsBySlug } from "@/lib/compare-data";
 import { CompareTable } from "@/components/compare/CompareTable";
 import { CompareSummary } from "@/components/compare/CompareSummary";
 import { useCompareStore } from "@/stores/compare";
@@ -17,68 +18,6 @@ export function meta(_: Route.MetaArgs) {
     { title: "Compare AI Tools — AI Wiki" },
     { name: "description", content: "Compare AI tools side-by-side. See pricing, features, and capabilities at a glance." },
   ];
-}
-
-interface ComparableTool {
-  id: string;
-  slug: string;
-  name: string;
-  tagline: string;
-  website_url: string;
-  logo_url: string | null;
-  primary_category_id: string | null;
-  pricing_tier: string;
-  has_free_tier: boolean;
-  pricing_starts_at: number | null;
-  pricing_currency: string;
-  audience_fit: string;
-  model_provider: string | null;
-  open_source: boolean;
-  self_hostable: boolean;
-  api_available: boolean;
-  founded_year: number | null;
-  hq_country: string | null;
-  hq_city: string | null;
-  key_strengths: string[];
-  category_name?: string | null;
-}
-
-async function fetchToolsBySlug(slugs: string[]): Promise<ComparableTool[]> {
-  if (slugs.length === 0) return [];
-
-  const { data: tools, error } = await supabase
-    .from("tools")
-    .select("*")
-    .in("slug", slugs)
-    .eq("status", "published");
-
-  if (error || !tools) return [];
-
-  // Fetch category names
-  const categoryIds = tools
-    .map((t) => t.primary_category_id)
-    .filter((id): id is string => !!id);
-
-  const categoryMap = new Map<string, string>();
-  if (categoryIds.length > 0) {
-    const { data: categories } = await supabase
-      .from("categories")
-      .select("id, name")
-      .in("id", categoryIds);
-    for (const c of categories ?? []) {
-      categoryMap.set(c.id, c.name);
-    }
-  }
-
-  // Preserve input slug order
-  const toolMap = new Map(tools.map((t) => [t.slug, t]));
-  return slugs
-    .map((slug) => toolMap.get(slug))
-    .filter((t): t is NonNullable<typeof t> => !!t)
-    .map((t) => ({
-      ...(t as ComparableTool),
-      category_name: t.primary_category_id ? (categoryMap.get(t.primary_category_id) ?? null) : null,
-    }));
 }
 
 const SKELETON_COL_KEYS = ["sk-label", "sk-col-1", "sk-col-2", "sk-col-3", "sk-col-4"];
@@ -114,7 +53,7 @@ export default function ComparePage() {
 
   const { data: tools = [], isLoading } = useQuery({
     queryKey: ["compare-tools", slugs.join(",")],
-    queryFn: () => fetchToolsBySlug(slugs),
+    queryFn: () => fetchToolsBySlug(supabase, slugs),
     enabled: slugs.length > 0,
     staleTime: 5 * 60 * 1000,
   });

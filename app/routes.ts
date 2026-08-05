@@ -13,6 +13,7 @@ export default [
     route("categories/:slug", "routes/categories.$slug.tsx"),
     route("suggest", "routes/suggest.tsx"),
     route("compare", "routes/compare.tsx"),
+    route("compare/:slug", "routes/compare.$slug.tsx"),
     route("search", "routes/search.tsx"),
     route("submit", "routes/submit._index.tsx"),
     route("submit/:draftId", "routes/submit.$draftId.tsx"),
