@@ -23,6 +23,17 @@ All notable changes to AI Wiki are documented here. Format loosely follows
   navigation, tracked as `citation_click`); and each answer gains Stop (cancel
   streaming), Copy, and Retry (on error) controls. `MarkdownRenderer` gained an
   optional `components` prop to support the client-side citation links.
+- **Save from chat.** Recommendation cards in a chat answer now have a one-tap
+  "save to bookmarks" control — auth-gated for signed-out visitors — turning a
+  recommendation into a saved tool (and an account signal). Tracked as
+  `chat_save`.
+
+### Fixed
+
+- **Auth modal on `/chat`.** The chat route (which lives outside `AppShell`) now
+  renders `AuthModal`, so the sidebar "Sign in" button and the new
+  save-to-bookmarks prompt actually open a dialog — previously they set store
+  state with no modal mounted to react to it.
 
 ### Changed
 

@@ -77,6 +77,8 @@ type EventMap = {
   recommendation_shown: { signed_in: boolean; tool_count: number };
   /** User clicked through from a chat answer to a tool page (chat → tool). */
   citation_click: { signed_in: boolean; source: "card" | "inline" };
+  /** User saved a recommended tool to bookmarks from a chat answer. */
+  chat_save: { signed_in: boolean; result: "saved" | "auth_required" | "error" };
 };
 
 // Vercel's track() accepts these primitive property values.

@@ -5,6 +5,7 @@ import { PanelLeftOpen, LayoutGrid, GitCompare } from "lucide-react";
 import type { Route } from "./+types/chat";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
+import { AuthModal } from "@/components/auth/AuthModal";
 import { parseChatSource } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,7 @@ export default function ChatPage() {
   };
 
   return (
+    <>
     <div className="absolute inset-0 flex flex-col overflow-hidden">
       {/* ── Wayfinding header ────────────────────────────────────────────── */}
       <ChatHeader />
@@ -127,5 +129,9 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+    {/* AuthModal lives here because /chat is outside AppShell (which renders its
+        own). Enables the sidebar sign-in and "save to bookmarks" auth prompt. */}
+    <AuthModal />
+    </>
   );
 }
