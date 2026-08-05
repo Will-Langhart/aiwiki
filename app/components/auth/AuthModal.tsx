@@ -43,11 +43,16 @@ export function AuthModal() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "github") => {
+  const handleOAuth = async (provider: "google" | "github" | "azure") => {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        // Azure/Microsoft: request the scopes Supabase needs to populate
+        // email + profile. Google/GitHub use their defaults.
+        ...(provider === "azure" ? { scopes: "openid profile email" } : {}),
+      },
     });
     if (error) {
       setError(error.message);
@@ -133,6 +138,16 @@ export function AuthModal() {
                 >
                   <Github size={15} />
                   GitHub
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="col-span-2 gap-2 text-sm font-normal"
+                  onClick={() => handleOAuth("azure")}
+                  disabled={view === "loading"}
+                >
+                  <MicrosoftIcon />
+                  Microsoft
                 </Button>
               </div>
 
@@ -222,6 +237,17 @@ function GoogleIcon() {
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         fill="#EA4335"
       />
+    </svg>
+  );
+}
+
+function MicrosoftIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11.4 11.4H1V1h10.4v10.4z" fill="#F25022" />
+      <path d="M23 11.4H12.6V1H23v10.4z" fill="#7FBA00" />
+      <path d="M11.4 23H1V12.6h10.4V23z" fill="#00A4EF" />
+      <path d="M23 23H12.6V12.6H23V23z" fill="#FFB900" />
     </svg>
   );
 }
