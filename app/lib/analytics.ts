@@ -24,12 +24,13 @@ export type ChatSource =
   | "deep_link" // arrived via /chat?q=… with no more specific source
   | "home_hero" // the conversational hero box on the landing page
   | "home_teaser" // the "Ask AI Wiki" teaser section on the landing page
+  | "answer" // "Ask a follow-up" from a public answer page
   | "composer" // typed into the input
   | "unknown";
 
 /** Coerce an untrusted ?src= query value into a known ChatSource. */
 const CHAT_SOURCES = new Set<ChatSource>([
-  "empty_state", "suggested_prompt", "deep_link", "home_hero", "home_teaser", "composer", "unknown",
+  "empty_state", "suggested_prompt", "deep_link", "home_hero", "home_teaser", "answer", "composer", "unknown",
 ]);
 export function parseChatSource(value: string | null | undefined): ChatSource {
   return value && CHAT_SOURCES.has(value as ChatSource) ? (value as ChatSource) : "deep_link";
@@ -79,6 +80,12 @@ type EventMap = {
   citation_click: { signed_in: boolean; source: "card" | "inline" };
   /** User saved a recommended tool to bookmarks from a chat answer. */
   chat_save: { signed_in: boolean; result: "saved" | "auth_required" | "error" };
+  /** A public answer page became viewable. */
+  answer_view: { channel: Channel; signed_in: boolean; has_category: boolean };
+  /** Click from an answer page to a cited tool (answer → tool). */
+  answer_tool_click: { signed_in: boolean; source: "card" | "inline" };
+  /** Click the "Ask a follow-up" CTA from an answer page into /chat. */
+  answer_followup_click: { signed_in: boolean };
 };
 
 // Vercel's track() accepts these primitive property values.

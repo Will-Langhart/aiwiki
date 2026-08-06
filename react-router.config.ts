@@ -1,6 +1,7 @@
 import type { Config } from "@react-router/dev/config";
 import { createClient } from "@supabase/supabase-js";
 import { getPopularComparePaths } from "./app/lib/compare-paths";
+import { getPublishedAnswerPaths } from "./app/lib/answer-paths";
 
 export default {
   ssr: false,
@@ -16,11 +17,12 @@ export default {
 
     const supabase = createClient(url, key);
 
-    const [{ data: tools }, { data: categories }, comparePaths] =
+    const [{ data: tools }, { data: categories }, comparePaths, answerPaths] =
       await Promise.all([
         supabase.from("tools").select("slug").eq("status", "published"),
         supabase.from("categories").select("slug"),
         getPopularComparePaths(supabase),
+        getPublishedAnswerPaths(supabase),
       ]);
 
     const toolPaths = (tools ?? []).flatMap((t) => [
@@ -31,6 +33,9 @@ export default {
 
     const categoryPaths = (categories ?? []).map((c) => `/categories/${c.slug}`);
 
-    return ["/", "/tools", "/suggest", ...toolPaths, ...categoryPaths, ...comparePaths];
+    return [
+      "/", "/tools", "/suggest", "/answers",
+      ...toolPaths, ...categoryPaths, ...comparePaths, ...answerPaths,
+    ];
   },
 } satisfies Config;
