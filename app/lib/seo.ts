@@ -139,6 +139,35 @@ export function breadcrumbLd(
   };
 }
 
+/** FAQPage JSON-LD for a single-question answer page. */
+export function faqPageLd(question: string, answerText: string): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: { "@type": "Answer", text: answerText },
+      },
+    ],
+  };
+}
+
+/** ItemList JSON-LD for an ordered set of cited tools. */
+export function itemListLd(items: Array<{ name: string; slug: string }>): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      url: absoluteUrl(`/tools/${it.slug}`),
+    })),
+  };
+}
+
 interface ToolLdInput {
   name: string;
   slug: string;

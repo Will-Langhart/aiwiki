@@ -299,6 +299,7 @@ function Footer() {
           <div className="flex items-center gap-5 text-xs text-text-muted">
             <Link to="/tools" className="hover:text-text transition-colors">Browse</Link>
             <Link to="/compare" className="hover:text-text transition-colors">Compare</Link>
+            <Link to="/answers" className="hover:text-text transition-colors">Answers</Link>
             <Link to="/chat" className="hover:text-text transition-colors">Ask AI</Link>
             <Link to="/suggest" className="hover:text-text transition-colors">Suggest a tool</Link>
             <span className="text-text-subtle/40">·</span>

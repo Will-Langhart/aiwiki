@@ -13,6 +13,7 @@ config({ path: ".env.local" });
 config();
 import { createClient } from "@supabase/supabase-js";
 import { getPopularCompareSlugs } from "../app/lib/compare-paths";
+import { getPublishedAnswerSlugs } from "../app/lib/answer-paths";
 import type { Database } from "../app/types/database";
 
 const SITE_URL = "https://aiwiki.io";
@@ -40,6 +41,7 @@ const STATIC_ROUTES: UrlEntry[] = [
   { loc: "/", changefreq: "daily", priority: 1.0, lastmod: BUILD_DATE },
   { loc: "/tools", changefreq: "daily", priority: 0.9, lastmod: BUILD_DATE },
   { loc: "/compare", changefreq: "weekly", priority: 0.6, lastmod: BUILD_DATE },
+  { loc: "/answers", changefreq: "weekly", priority: 0.7, lastmod: BUILD_DATE },
   { loc: "/suggest", changefreq: "monthly", priority: 0.4, lastmod: BUILD_DATE },
 ];
 
@@ -72,10 +74,11 @@ async function main() {
     console.warn("[sitemap] Missing Supabase env — writing static routes only.");
   } else {
     const supabase = createClient<Database>(url, key);
-    const [{ data: tools }, { data: categories }, compareSlugs] = await Promise.all([
+    const [{ data: tools }, { data: categories }, compareSlugs, answerSlugs] = await Promise.all([
       supabase.from("tools").select("slug, updated_at").eq("status", "published"),
       supabase.from("categories").select("slug, created_at"),
       getPopularCompareSlugs(supabase),
+      getPublishedAnswerSlugs(supabase),
     ]);
 
     for (const t of tools ?? []) {
@@ -105,8 +108,16 @@ async function main() {
         lastmod: c.lastmod ?? BUILD_DATE,
       });
     }
+    for (const a of answerSlugs) {
+      entries.push({
+        loc: `/answers/${a.slug}`,
+        changefreq: "weekly",
+        priority: 0.7,
+        lastmod: a.lastmod ?? BUILD_DATE,
+      });
+    }
     console.log(
-      `[sitemap] ${tools?.length ?? 0} tools, ${categories?.length ?? 0} categories, ${compareSlugs.length} comparisons.`,
+      `[sitemap] ${tools?.length ?? 0} tools, ${categories?.length ?? 0} categories, ${compareSlugs.length} comparisons, ${answerSlugs.length} answers.`,
     );
   }
 
