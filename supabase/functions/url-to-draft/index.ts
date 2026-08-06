@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     // Fetch the page
     const pageRes = await fetch(url, {
       headers: {
-        "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.dev/bot)",
+        "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.io/bot)",
         Accept: "text/html",
       },
       signal: AbortSignal.timeout(10_000),

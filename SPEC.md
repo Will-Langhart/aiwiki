@@ -1255,7 +1255,7 @@ Called from client via `supabase.rpc('search_tools', { query, ... })`.
 # ============================================================================
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=ey...
-VITE_SITE_URL=https://aiwiki.dev
+VITE_SITE_URL=https://aiwiki.io
 
 # ============================================================================
 # Build-time only (used by react-router.config.ts prerender)
@@ -1615,8 +1615,8 @@ These are decisions intentionally deferred to be made when the work is in front 
 
 - **Accent color** — Spec uses `#3b82f6` (blue-500); alternative `#8b5cf6` (violet-500). Pick during Phase 0.
 - **Brand name / wordmark** — "AI Wiki" is the working name; a logo treatment (typography + mark) gets locked in Phase 1.
-- **Domain** — `aiwiki.dev` is suggested but not registered. `.dev` requires HSTS, which Vercel handles automatically.
-- **Custom email sender domain** — `noreply@aiwiki.dev` or similar; requires Resend domain verification (SPF + DKIM).
+- **Domain** — `aiwiki.io` is the production domain.
+- **Custom email sender domain** — `noreply@aiwiki.io`; requires Resend domain verification (SPF + DKIM).
 - **Pricing for AI features in long run** — v1 is unmetered for users; if costs spike, gate the chat behind sign-in or rate-limit harder.
 - **Whether to use a CMS overlay** — Some admins prefer Sanity Studio for content editing over a custom admin UI. We're building custom (the three-column editor) but it could be swapped to Sanity later if you'd rather edit there.
 

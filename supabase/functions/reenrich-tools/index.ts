@@ -64,7 +64,7 @@ async function enrichOne(
 ): Promise<{ tool_id: string; status: "ok" | "error"; error?: string }> {
   try {
     const pageRes = await fetch(url, {
-      headers: { "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.dev/bot)", Accept: "text/html" },
+      headers: { "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.io/bot)", Accept: "text/html" },
       signal: AbortSignal.timeout(12_000),
     });
     const html = await pageRes.text();

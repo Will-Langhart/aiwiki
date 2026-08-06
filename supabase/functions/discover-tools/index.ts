@@ -271,7 +271,7 @@ async function processUrl(
     // 1. Fetch page content
     const pageRes = await fetch(url, {
       headers: {
-        "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.dev/bot)",
+        "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.io/bot)",
         Accept: "text/html",
       },
       signal: AbortSignal.timeout(15_000),

@@ -2,8 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM_EMAIL = "AI Wiki <noreply@aiwiki.dev>";
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://aiwiki.dev";
+const FROM_EMAIL = "AI Wiki <noreply@aiwiki.io>";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "https://aiwiki.io";
 
 // Simple HTML email templates per notification type
 function renderEmail(type: string, payload: Record<string, string>, recipientName: string): { subject: string; html: string } {
