@@ -6,7 +6,7 @@ import {
   ArrowRight, Search, GitCompare, MessageSquare,
   Code2, Video, PenLine, BrainCircuit, Image, Mic,
   Workflow, BarChart3, Presentation, Database, ShoppingBag,
-  Headphones, BookOpen, Sparkles, Send,
+  Headphones, BookOpen, Sparkles,
 } from "lucide-react";
 import type { Route } from "./+types/_index";
 import { supabase } from "@/lib/supabase.client";
@@ -162,13 +162,6 @@ const HERO_PROMPTS = [
   "Tools with a generous free tier",
   "Edit video with AI",
   "Open-source models I can self-host",
-];
-
-const CHAT_PROMPTS = [
-  "What's the best AI coding assistant?",
-  "Compare free AI image generators",
-  "Best AI tools for writing and editing",
-  "Which AI tools have a generous free tier?",
 ];
 
 const howItWorks = [
@@ -369,68 +362,6 @@ function CompareSpotlight() {
             </span>
           </Link>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function ChatTeaser() {
-  const navigate = useNavigate();
-
-  function handleAsk(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim();
-    navigate(q ? `/chat?q=${encodeURIComponent(q)}&src=home_teaser` : "/chat?src=home_teaser");
-  }
-
-  return (
-    <section className="container pb-14">
-      <div
-        className="rounded-2xl border border-border p-6 sm:p-9 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--surface)), color-mix(in srgb, var(--accent-2) 6%, var(--surface)))" }}
-      >
-        <div className="pointer-events-none absolute inset-0 -z-0" aria-hidden="true">
-          <div className="absolute right-[-10%] top-[-30%] w-[420px] h-[260px] rounded-full opacity-[0.1] bg-[radial-gradient(ellipse_at_center,var(--accent)_0%,transparent_70%)]" />
-        </div>
-        <div className="relative z-10 max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 p-2 mb-4">
-            <img src="/logo.png" alt="AI Wiki" className="w-full h-full object-contain" />
-          </div>
-          <h2 className="text-2xl font-bold text-text mb-2">Not sure where to start? Ask AI Wiki</h2>
-          <p className="text-sm text-text-muted mb-6 leading-relaxed max-w-lg mx-auto">
-            Describe your use case in plain English and our RAG-powered assistant recommends tools
-            from the directory — with citations you can dig into.
-          </p>
-
-          <form onSubmit={handleAsk} className="relative max-w-lg mx-auto mb-5">
-            <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none" />
-            <input
-              name="q"
-              type="text"
-              placeholder="e.g. Best AI tool for editing podcasts on a budget…"
-              className="w-full pl-10 pr-14 py-3.5 rounded-xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
-            />
-            <button
-              type="submit"
-              aria-label="Ask AI Wiki"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-accent text-accent-fg hover:opacity-90 transition-opacity"
-            >
-              <Send size={15} />
-            </button>
-          </form>
-
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {CHAT_PROMPTS.map((prompt) => (
-              <Link
-                key={prompt}
-                to={`/chat?q=${encodeURIComponent(prompt)}&src=home_teaser`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 hover:bg-surface-2 transition-colors"
-              >
-                <Sparkles size={12} className="text-accent" /> {prompt}
-              </Link>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -661,9 +592,6 @@ export default function Home() {
           <LogoMarquee />
         </div>
       </section>
-
-      {/* ── Ask AI Wiki teaser ────────────────────────────────────────────── */}
-      <ChatTeaser />
 
       {/* ── Featured tools ────────────────────────────────────────────────── */}
       <section className="container pb-14">
