@@ -37,6 +37,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Changed
 
+- **Chat RAG: hybrid retrieval, relevance-aware prompt.** The `search_tools`
+  agent tool now calls `match_tools_hybrid` (pgvector ANN + tsvector FTS fused
+  via Reciprocal Rank Fusion) instead of pure vector search, so exact-name and
+  jargon queries land alongside paraphrases. Results are returned ranked
+  best-first with a per-hit relevance label (strong / good / weak / keyword
+  match) so the model can down-weight marginal matches. The system prompt was
+  rewritten to exploit this: date grounding (directory is the authority on
+  pricing), a faithfulness section (concrete facts — price, tier, API — must
+  come from tool results, never memory), permission to run multiple searches
+  for multi-part needs, and a compact few-shot of the recommendation shape.
 - **Conversational-first home hero.** The hero input now seeds an AI Wiki
   conversation (`/chat`) instead of a keyword search, and example-question chips
   replace the old keyword chips — making the AI assistant the primary entry
