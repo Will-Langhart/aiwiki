@@ -18,7 +18,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: "list",
+  // Console list everywhere; also emit the HTML report in CI for the artifact.
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     // The current suite is API-level (Supabase REST); no browser/baseURL needed.
     // A future UI suite can add a `webServer` and `baseURL` here.
