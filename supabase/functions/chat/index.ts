@@ -40,6 +40,17 @@ async function embedQuery(text: string): Promise<number[]> {
   return json.data[0].embedding;
 }
 
+// Map cosine similarity (or a lexical-only hit, where similarity is null) to a
+// coarse relevance label. The model never sees raw scores otherwise, so with a
+// low retrieval floor it can't tell a near-miss from a strong hit. Thresholds
+// are tuned for text-embedding-3-small, whose cosine scores run well below 1.0.
+function relevanceLabel(sim: number | null): string {
+  if (sim === null) return "keyword match";
+  if (sim >= 0.45) return "strong match";
+  if (sim >= 0.35) return "good match";
+  return "weak match";
+}
+
 // Tool definitions exposed to the model. The model drives retrieval — it rewrites
 // the user's query with conversation context and applies hard filters — instead of
 // the old fixed "embed latest message → stuff top 8" prelude.
@@ -47,7 +58,7 @@ const TOOLS = [
   {
     name: "search_tools",
     description:
-      "Semantic search over the AI Wiki tool directory. Rewrite the user's need into a focused query that includes context from earlier turns (e.g. on a follow-up like 'a cheaper one', search for the cheaper variant of what was already discussed). Apply filters only when the user clearly constrained on them. Returns matching tools with slug, tagline, pricing, audience, and strengths.",
+      "Hybrid keyword + semantic search over the AI Wiki tool directory. Rewrite the user's need into a focused query that includes context from earlier turns (e.g. on a follow-up like 'a cheaper one', search for the cheaper variant of what was already discussed). Apply filters only when the user clearly constrained on them. Returns matching tools ranked best-first, each prefixed with a relevance label (strong / good / weak / keyword match) plus slug, tagline, pricing, audience, and strengths.",
     input_schema: {
       type: "object",
       properties: {
@@ -107,16 +118,25 @@ const TOOLS = [
   },
 ];
 
-const SYSTEM_PROMPT = `You are AI Wiki — an expert friend who lives and breathes AI tools. You've tried most of them, you're opinionated, and you help people find the right tool fast. No fluff, no corporate speak.
+const SYSTEM_PROMPT = (today: string) => `You are AI Wiki — an expert friend who lives and breathes AI tools. You've tried most of them, you're opinionated, and you help people find the right tool fast. No fluff, no corporate speak.
+
+Today's date is ${today}. The directory is your source of truth for anything time-sensitive — pricing, tiers, and current capabilities.
 
 ## How you work
-You have three tools: \`search_tools\` (semantic search over the directory, with optional pricing/audience filters), \`get_tool_details\` (full overview for one tool), and \`compare_tools\` (side-by-side fact sheet for 2-4 tools). Use them to ground every recommendation in what's actually in the directory.
+You have three tools: \`search_tools\` (hybrid keyword + semantic search over the directory, with optional pricing/audience filters), \`get_tool_details\` (full overview for one tool), and \`compare_tools\` (side-by-side fact sheet for 2-4 tools). Use them to ground every recommendation in what's actually in the directory.
 
 - When a recommendation depends on directory tools, call \`search_tools\` first. Rewrite the user's need into a focused query that folds in earlier context — on a follow-up like "something cheaper" or "a non-technical option", search for that variant of what you were already discussing, don't search the literal two words.
+- If the need spans two ideas ("an image generator I can also call from an API"), run \`search_tools\` twice with different phrasings and merge the results — you have room for a few tool calls.
 - Apply filters (\`pricing_tier\`, \`has_free_tier\`, \`audience_fit\`) only when the user clearly constrained on them.
+- Results come back ranked best-first, each tagged with a relevance label. Lead with **strong** and **good** matches. Treat **weak** and **keyword** matches with suspicion — verify with \`get_tool_details\` before recommending one, or drop it.
 - Call \`get_tool_details\` on your finalists when the search summary isn't enough to pick confidently.
 - When the user is weighing specific tools against each other ("X vs Y"), call \`compare_tools\` to line up the trade-offs.
 - **Call tools silently — do not write any text before a tool call.** Only write text when you're giving the final answer.
+
+## Staying honest
+- Every concrete fact — price, free tier, audience, whether there's an API — must come from a tool result this turn, not from memory. Your training data on pricing is stale; never state a number you didn't just retrieve.
+- Don't invent strengths. Your "why it fits" line has to trace back to strengths or overview text you actually saw.
+- If the best fit isn't indexed, you may draw on general knowledge — but speak only to what the tool broadly does, not to specifics like price, and flag it: "That one isn't in our directory yet, but here's what I know…" Then still point to a comparable tool that IS in the directory.
 
 ## Your workflow for tool recommendations
 1. If they haven't given enough context, ask ONE short clarifying question — budget, use case, or technical level. One question only, keep it casual. Skip this if they already gave enough to go on. (No tool calls needed for a clarifying question.)
@@ -126,8 +146,14 @@ You have three tools: \`search_tools\` (semantic search over the directory, with
    - The key trade-off vs the alternatives
 3. Finish with a clear tiebreaker: "If I had to pick one for you, I'd go with [tool:slug] because…"
 
-## When a tool isn't in the directory
-If search comes up empty or the best fit isn't indexed, answer from your general knowledge and flag it naturally: "That one isn't in our directory yet, but here's what I know…" Then still try to point to a comparable tool that is in the directory.
+## Example of a good turn
+User: "I need to generate product photos for my Shopify store, I'm not technical"
+(silently call search_tools, query "AI product photography for e-commerce", audience_fit "non_technical")
+You: "For no-code product shots, two I'd trust:
+[tool:example-a] — built for exactly this: upload a photo, it restyles the background. Cheapest here, but less control over composition.
+[tool:example-b] — more powerful with finer control, but there's a learning curve and it costs more.
+If I had to pick one for you, I'd go with [tool:example-a] — it's made for the Shopify case and you'll be productive in minutes."
+(example-a / example-b are placeholders — only ever cite real slugs from tool results.)
 
 ## Tone
 Casual, direct, and opinionated. Short sentences. Cut to what actually matters. Give a real recommendation — don't hide behind "it depends."
@@ -136,6 +162,7 @@ Casual, direct, and opinionated. Short sentences. Cut to what actually matters. 
 - Never list more than 3 tools in a single recommendation
 - Never ask more than 1 clarifying question at a time
 - Never repeat the user's question back to them
+- Never state a price or tier you didn't retrieve this turn
 - Always use [tool:slug] format when naming a specific tool that's in the directory`;
 
 Deno.serve(async (req) => {
@@ -179,6 +206,7 @@ Deno.serve(async (req) => {
 
     // Rate limit check
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
     if (userId) {
       const { count } = await supabaseAdmin
         .from("chat_messages")
@@ -278,9 +306,12 @@ Deno.serve(async (req) => {
       limit?: number;
     }): Promise<string> {
       const embedding = await embedQuery(input.query);
-      const { data: matched, error } = await supabaseAdmin.rpc("match_tools_filtered", {
+      // Hybrid retrieval (0021): fuses pgvector ANN with tsvector FTS via RRF, so
+      // exact-name/jargon queries land alongside paraphrases. Rows come back
+      // already ranked best-first; `similarity` is null for lexical-only hits.
+      const { data: matched, error } = await supabaseAdmin.rpc("match_tools_hybrid", {
         query_embedding: embedding,
-        match_threshold: 0.3,
+        query_text: input.query,
         match_count: Math.min(Math.max(input.limit ?? 8, 1), 12),
         filter_pricing_tier: input.pricing_tier ?? null,
         filter_has_free_tier: input.has_free_tier ?? null,
@@ -291,8 +322,12 @@ Deno.serve(async (req) => {
         return "No matching tools in the directory for that query and filters.";
       }
 
-      // match_tools_filtered returns full card fields — cache them for citations.
+      // Hybrid returns full card fields — cache them for citations — plus the
+      // similarity score we turn into a relevance label for the model.
       for (const m of matched as ToolCard[]) cacheCard(m);
+      const simById = new Map(
+        (matched as Array<{ id: string; similarity: number | null }>).map((m) => [m.id, m.similarity]),
+      );
 
       const ids = matched.map((t: { id: string }) => t.id);
       const { data: details } = await supabaseAdmin
@@ -301,16 +336,18 @@ Deno.serve(async (req) => {
         .in("id", ids);
       const byId = new Map((details ?? []).map((d: { id: string }) => [d.id, d]));
 
+      // Iterate `matched` (not `details`) to preserve the RRF ranking.
       const lines = matched.map((m: { id: string }) => {
         const t = byId.get(m.id) as {
           slug: string; name: string; tagline: string; pricing_tier: string;
           has_free_tier: boolean; audience_fit: string; key_strengths: string[];
         } | undefined;
         if (!t) return null;
-        return `[tool:${t.slug}] ${t.name} — ${t.tagline}. Pricing: ${t.pricing_tier}${t.has_free_tier ? " (free tier)" : ""}. Audience: ${t.audience_fit.replace("_", " ")}. Strengths: ${(t.key_strengths ?? []).join(", ")}.`;
+        const rel = relevanceLabel(simById.get(m.id) ?? null);
+        return `(${rel}) [tool:${t.slug}] ${t.name} — ${t.tagline}. Pricing: ${t.pricing_tier}${t.has_free_tier ? " (free tier)" : ""}. Audience: ${t.audience_fit.replace("_", " ")}. Strengths: ${(t.key_strengths ?? []).join(", ")}.`;
       }).filter(Boolean);
 
-      return lines.join("\n");
+      return `Ranked best-first:\n${lines.join("\n")}`;
     }
 
     async function runGetToolDetails(input: { slug: string }): Promise<string> {
@@ -429,7 +466,7 @@ Deno.serve(async (req) => {
           const stream = anthropic.messages.stream({
             model: CHAT_MODEL,
             max_tokens: 1024,
-            system: SYSTEM_PROMPT,
+            system: SYSTEM_PROMPT(todayStr),
             messages,
             // On the final allowed iteration, drop tools so the model must answer
             // from what it has rather than requesting another round-trip it can't take.
