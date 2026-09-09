@@ -7,6 +7,8 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- ModelRush seed entry under AI infrastructure, with usage-based pricing and age-restricted catalog disclosure.
+
 - **Chat funnel analytics.** New typed, centralized analytics module
   (`app/lib/analytics.ts`) wrapping Vercel Web Analytics custom events, with
   privacy-preserving channel resolution (referrer host → enum; never PII, raw
