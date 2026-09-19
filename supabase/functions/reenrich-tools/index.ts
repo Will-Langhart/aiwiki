@@ -14,9 +14,11 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { langevalConfigFromEnv, type Span, Trace, tracedAnthropic } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
 
+const LANGEVAL = langevalConfigFromEnv("aiwiki-reenrich-tools");
 const DAILY_COST_CAP_USD = 15.0;
 const MAX_PER_REQUEST = 20;
 
@@ -61,7 +63,13 @@ async function enrichOne(
   toolId: string,
   url: string,
   supabaseAdmin: ReturnType<typeof createClient>,
+  trace: Trace,
+  parent: Span,
 ): Promise<{ tool_id: string; status: "ok" | "error"; error?: string }> {
+  // Failures are returned rather than thrown, so the catch marks the span.
+  const span = trace
+    .start("enrich_one", { "openinference.span.kind": "CHAIN", "aiwiki.tool_id": toolId }, parent)
+    .content("input", url);
   try {
     const pageRes = await fetch(url, {
       headers: { "User-Agent": "AIWikiBot/1.0 (+https://aiwiki.io/bot)", Accept: "text/html" },
@@ -70,7 +78,7 @@ async function enrichOne(
     const html = await pageRes.text();
     const text = extractText(html).slice(0, 6_000);
 
-    const msg = await anthropic.messages.create({
+    const request: Anthropic.MessageCreateParamsNonStreaming = {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
       system: "You are an AI tool directory curator. Extract concise, factual metadata from website content. Never fabricate.",
@@ -81,10 +89,11 @@ async function enrichOne(
       tools: [{
         name: "extract_metadata",
         description: "Extract lightweight metadata fields",
-        input_schema: ENRICH_SCHEMA as Parameters<typeof anthropic.messages.create>[0]["tools"][0]["input_schema"],
+        input_schema: ENRICH_SCHEMA as Anthropic.Tool["input_schema"],
       }],
       tool_choice: { type: "tool", name: "extract_metadata" },
-    });
+    };
+    const msg = await tracedAnthropic(trace, span, request, () => anthropic.messages.create(request));
 
     await supabaseAdmin.from("llm_usage").insert({
       feature: "reenrich_tools",
@@ -108,9 +117,13 @@ async function enrichOne(
       })
       .eq("id", toolId);
 
+    span.content("output", d);
     return { tool_id: toolId, status: "ok" };
   } catch (err) {
+    span.fail(err);
     return { tool_id: toolId, status: "error", error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    span.end();
   }
 }
 
@@ -148,14 +161,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    const trace = new Trace(LANGEVAL);
+    const root = trace
+      .start("reenrich-tools", { "openinference.span.kind": "CHAIN", "aiwiki.item_count": items.length })
+      .content("input", items);
+
     const results = [];
     for (const item of items) {
-      const r = await enrichOne(item.tool_id, item.website_url, supabaseAdmin);
+      const r = await enrichOne(item.tool_id, item.website_url, supabaseAdmin, trace, root);
       results.push(r);
       console.log(`[reenrich-tools] ${r.status.toUpperCase()} ${item.website_url} (${item.tool_id})`);
     }
 
     const succeeded = results.filter((r) => r.status === "ok").length;
+    root.set({ "aiwiki.succeeded": succeeded, "aiwiki.errored": results.length - succeeded })
+      .content("output", results)
+      .end();
+    trace.flush();
     return new Response(
       JSON.stringify({ results, summary: { succeeded, errored: results.length - succeeded, total: results.length } }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -1,8 +1,11 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { langevalConfigFromEnv, type Span, Trace, tracedAnthropic } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
+const LANGEVAL = langevalConfigFromEnv("aiwiki-url-to-draft");
+const MODEL = "claude-sonnet-4-5";
 
 // Strip HTML tags and collapse whitespace
 function extractText(html: string): string {
@@ -22,6 +25,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // The root span opens once the request has passed auth and the rate limit;
+  // requests turned away before that made no model call and aren't traced.
+  const trace = new Trace(LANGEVAL);
+  let root: Span | undefined;
 
   try {
     // Auth check
@@ -72,6 +80,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    root = trace
+      .start("url-to-draft", {
+        "openinference.span.kind": "CHAIN",
+        "langeval.user_id": user.id,
+      })
+      .content("input", url);
+
     // Fetch the page
     const pageRes = await fetch(url, {
       headers: {
@@ -83,6 +98,7 @@ Deno.serve(async (req) => {
 
     const html = await pageRes.text();
     const textContent = extractText(html).slice(0, 8000);
+    root.set({ "aiwiki.page_status": pageRes.status, "aiwiki.page_chars": textContent.length });
 
     // Call Claude
     const prompt = `Extract structured information about this AI tool from its website.
@@ -104,11 +120,14 @@ Return JSON matching this schema exactly (no markdown, just raw JSON):
   "key_strengths": ["string", "string", "string"]
 }`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+    const request: Anthropic.MessageCreateParamsNonStreaming = {
+      model: MODEL,
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
-    });
+    };
+    const message = await tracedAnthropic(trace, root, request, () =>
+      anthropic.messages.create(request),
+    );
 
     const inputTokens = message.usage.input_tokens;
     const outputTokens = message.usage.output_tokens;
@@ -137,14 +156,19 @@ Return JSON matching this schema exactly (no markdown, just raw JSON):
       throw new Error("Failed to parse Claude response as JSON");
     }
 
+    root.content("output", parsed);
     return new Response(JSON.stringify({ data: parsed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    root?.fail(err);
     const message = err instanceof Error ? err.message : "Internal error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  } finally {
+    root?.end();
+    trace.flush();
   }
 });

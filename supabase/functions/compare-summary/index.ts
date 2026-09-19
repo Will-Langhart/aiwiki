@@ -1,8 +1,10 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { anthropicUsageAttrs, langevalConfigFromEnv, Trace } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
+const LANGEVAL = langevalConfigFromEnv("aiwiki-compare-summary");
 const MAX_DAILY_SPEND_USD = Number(Deno.env.get("MAX_DAILY_SPEND_USD_COMPARE") ?? "3");
 
 Deno.serve(async (req) => {
@@ -122,11 +124,34 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
     });
 
+    // Only fresh generations are traced — a cache hit made no model call.
+    const trace = new Trace(LANGEVAL);
+    const root = trace
+      .start("compare-summary", {
+        "openinference.span.kind": "CHAIN",
+        "aiwiki.comparison": cacheSlug,
+      })
+      .content("input", tool_slugs);
+    const model = "claude-sonnet-4-5";
+    const llm = trace
+      .start(
+        `chat ${model}`,
+        {
+          "openinference.span.kind": "LLM",
+          "gen_ai.operation.name": "chat",
+          "gen_ai.provider.name": "anthropic",
+          "gen_ai.request.model": model,
+          "gen_ai.request.max_tokens": 512,
+        },
+        root,
+      )
+      .content("input", [{ role: "user", content: prompt }]);
+
     // Run streaming in background
     (async () => {
       try {
         const stream = anthropic.messages.stream({
-          model: "claude-sonnet-4-5",
+          model,
           max_tokens: 512,
           messages: [{ role: "user", content: prompt }],
         });
@@ -140,7 +165,17 @@ Deno.serve(async (req) => {
           }
         }
 
-        const usage = (await stream.finalMessage()).usage;
+        const final = await stream.finalMessage();
+        const usage = final.usage;
+        llm
+          .set({
+            "gen_ai.response.model": final.model,
+            "gen_ai.response.id": final.id,
+            "gen_ai.response.finish_reasons": final.stop_reason ?? undefined,
+            ...anthropicUsageAttrs(usage),
+          })
+          .content("output", fullText)
+          .end();
 
         // Cache result (tool_ids is uuid[] — use ids, not slugs)
         await admin.from("comparisons").upsert({
@@ -158,9 +193,15 @@ Deno.serve(async (req) => {
           cost_usd: (usage.input_tokens * 3 + usage.output_tokens * 15) / 1_000_000,
         });
       } catch (err) {
+        llm.fail(err);
+        root.fail(err);
         const msg = err instanceof Error ? err.message : "Streaming error";
         await writer.write(new TextEncoder().encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
       } finally {
+        // Before the writes below, which reject if the client has gone away.
+        llm.end();
+        root.content("output", fullText).end();
+        trace.flush();
         await writer.write(new TextEncoder().encode("data: [DONE]\n\n"));
         await writer.close();
       }
