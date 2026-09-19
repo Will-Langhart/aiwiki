@@ -1,11 +1,18 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  anthropicUsageAttrs,
+  langevalConfigFromEnv,
+  type Span,
+  Trace,
+} from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const CHAT_MODEL = "claude-sonnet-4-6";
+const LANGEVAL = langevalConfigFromEnv("aiwiki-chat");
 const MAX_DAILY_SPEND_USD = Number(Deno.env.get("MAX_DAILY_SPEND_USD_CHAT") ?? "10");
 
 // Sonnet 4.6 pricing, per million tokens.
@@ -29,15 +36,32 @@ async function hashIp(ip: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function embedQuery(text: string): Promise<number[]> {
-  const res = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
-  });
-  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-  const json = await res.json() as { data: Array<{ embedding: number[] }> };
-  return json.data[0].embedding;
+async function embedQuery(text: string, trace: Trace, parent: Span): Promise<number[]> {
+  const span = trace.start(`embeddings ${EMBEDDING_MODEL}`, {
+    "openinference.span.kind": "EMBEDDING",
+    "gen_ai.operation.name": "embeddings",
+    "gen_ai.provider.name": "openai",
+    "gen_ai.request.model": EMBEDDING_MODEL,
+  }, parent).content("input", text);
+  try {
+    const res = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
+    });
+    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    const json = await res.json() as {
+      data: Array<{ embedding: number[] }>;
+      usage?: { prompt_tokens?: number };
+    };
+    span.set({ "gen_ai.usage.input_tokens": json.usage?.prompt_tokens });
+    return json.data[0].embedding;
+  } catch (err) {
+    span.fail(err);
+    throw err;
+  } finally {
+    span.end();
+  }
 }
 
 // Map cosine similarity (or a lexical-only hit, where similarity is null) to a
@@ -283,6 +307,16 @@ Deno.serve(async (req) => {
 
     const conversationHistory = (history ?? []).reverse() as Array<{ role: string; content: string }>;
 
+    // One trace per turn, grouped into a thread by chat session. user_id is set
+    // only for signed-in users — anonymous traffic is never tied to an IP.
+    const trace = new Trace(LANGEVAL);
+    const root = trace.start("chat", {
+      "openinference.span.kind": "AGENT",
+      "gen_ai.agent.name": "aiwiki-chat",
+      "langeval.thread_id": sessionId,
+      "langeval.user_id": userId ?? undefined,
+    }).content("input", message);
+
     // --- Agentic retrieval tools (executed server-side) ---
 
     // Card data for every tool the model touches this turn. Citations are sourced
@@ -304,8 +338,8 @@ Deno.serve(async (req) => {
       has_free_tier?: boolean;
       audience_fit?: string;
       limit?: number;
-    }): Promise<string> {
-      const embedding = await embedQuery(input.query);
+    }, parent: Span): Promise<string> {
+      const embedding = await embedQuery(input.query, trace, parent);
       // Hybrid retrieval (0021): fuses pgvector ANN with tsvector FTS via RRF, so
       // exact-name/jargon queries land alongside paraphrases. Rows come back
       // already ranked best-first; `similarity` is null for lexical-only hits.
@@ -405,14 +439,26 @@ Deno.serve(async (req) => {
       ).join("\n\n");
     }
 
-    async function runTool(name: string, input: unknown): Promise<string> {
+    // Each call is a TOOL span whose output is exactly what the model read —
+    // the retrieved context a groundedness judge needs to check the answer.
+    async function runTool(name: string, input: unknown, parent: Span): Promise<string> {
+      const span = trace.start(name, {
+        "openinference.span.kind": "TOOL",
+        "tool.name": name,
+      }, parent).content("input", input);
       try {
-        if (name === "search_tools") return await runSearchTools(input as Parameters<typeof runSearchTools>[0]);
-        if (name === "get_tool_details") return await runGetToolDetails(input as { slug: string });
-        if (name === "compare_tools") return await runCompareTools(input as { slugs: string[] });
-        return `Unknown tool: ${name}`;
+        let result: string;
+        if (name === "search_tools") result = await runSearchTools(input as Parameters<typeof runSearchTools>[0], span);
+        else if (name === "get_tool_details") result = await runGetToolDetails(input as { slug: string });
+        else if (name === "compare_tools") result = await runCompareTools(input as { slugs: string[] });
+        else result = `Unknown tool: ${name}`;
+        span.content("output", result);
+        return result;
       } catch (err) {
+        span.fail(err);
         return `Tool error: ${err instanceof Error ? err.message : "unknown"}`;
+      } finally {
+        span.end();
       }
     }
 
@@ -463,25 +509,48 @@ Deno.serve(async (req) => {
         for (let iter = 0; iter < MAX_AGENT_ITERATIONS; iter++) {
           const isLastAllowed = iter === MAX_AGENT_ITERATIONS - 1;
 
-          const stream = anthropic.messages.stream({
-            model: CHAT_MODEL,
-            max_tokens: 1024,
-            system: SYSTEM_PROMPT(todayStr),
-            messages,
-            // On the final allowed iteration, drop tools so the model must answer
-            // from what it has rather than requesting another round-trip it can't take.
-            ...(isLastAllowed ? {} : { tools: TOOLS }),
-          });
+          const llm = trace.start(`chat ${CHAT_MODEL}`, {
+            "openinference.span.kind": "LLM",
+            "gen_ai.operation.name": "chat",
+            "gen_ai.provider.name": "anthropic",
+            "gen_ai.request.model": CHAT_MODEL,
+            "gen_ai.request.max_tokens": 1024,
+            "aiwiki.iteration": iter,
+          }, root).content("input", messages);
 
           let turnText = "";
-          for await (const event of stream) {
-            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-              turnText += event.delta.text;
-              await send({ type: "content_block_delta", delta: event.delta });
-            }
-          }
+          let final: Anthropic.Message;
+          try {
+            const stream = anthropic.messages.stream({
+              model: CHAT_MODEL,
+              max_tokens: 1024,
+              system: SYSTEM_PROMPT(todayStr),
+              messages,
+              // On the final allowed iteration, drop tools so the model must answer
+              // from what it has rather than requesting another round-trip it can't take.
+              ...(isLastAllowed ? {} : { tools: TOOLS }),
+            });
 
-          const final = await stream.finalMessage();
+            for await (const event of stream) {
+              if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+                turnText += event.delta.text;
+                await send({ type: "content_block_delta", delta: event.delta });
+              }
+            }
+
+            final = await stream.finalMessage();
+            llm.set({
+              "gen_ai.response.model": final.model,
+              "gen_ai.response.id": final.id,
+              "gen_ai.response.finish_reasons": final.stop_reason ?? undefined,
+              ...anthropicUsageAttrs(final.usage),
+            }).content("output", final.content);
+          } catch (err) {
+            llm.fail(err);
+            throw err;
+          } finally {
+            llm.end();
+          }
           await logUsage(final.usage);
 
           const toolUses = (final.content as Array<{ type: string; id: string; name: string; input: unknown }>)
@@ -497,7 +566,7 @@ Deno.serve(async (req) => {
           messages.push({ role: "assistant", content: final.content });
           const results = [];
           for (const tu of toolUses) {
-            const result = await runTool(tu.name, tu.input);
+            const result = await runTool(tu.name, tu.input, root);
             results.push({ type: "tool_result", tool_use_id: tu.id, content: result });
           }
           messages.push({ role: "user", content: results });
@@ -509,6 +578,7 @@ Deno.serve(async (req) => {
         // general knowledge but present in the directory).
         const citationMatches = [...fullText.matchAll(/\[tool:([a-z0-9-]+)\]/g)];
         const citedSlugs = [...new Set(citationMatches.map((m) => m[1]))];
+        root.set({ "aiwiki.cited_tools": citedSlugs.join(",") });
 
         let finalCitedIds: string[] = [];
         if (citedSlugs.length > 0) {
@@ -539,9 +609,14 @@ Deno.serve(async (req) => {
           tool_citations: finalCitedIds,
         });
       } catch (err) {
+        root.fail(err);
         const msg = err instanceof Error ? err.message : "Streaming error";
         await send({ type: "error", error: msg });
       } finally {
+        // Before the writes below, which reject if the client has gone away. The
+        // flush itself runs in the background and never delays the stream.
+        root.content("output", fullText).end();
+        trace.flush();
         await writer.write(encoder.encode("data: [DONE]\n\n"));
         await writer.close();
       }
