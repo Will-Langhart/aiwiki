@@ -154,6 +154,28 @@ export class Trace {
     return span;
   }
 
+  /**
+   * Run fn inside a span: a throw marks the span failed and is rethrown, and
+   * the span always ends. For code that returns errors instead of throwing,
+   * call span.fail() inside fn.
+   */
+  async run<T>(
+    name: string,
+    attrs: Attrs,
+    parent: Span | undefined,
+    fn: (span: Span) => Promise<T>,
+  ): Promise<T> {
+    const span = this.start(name, attrs, parent);
+    try {
+      return await fn(span);
+    } catch (err) {
+      span.fail(err);
+      throw err;
+    } finally {
+      span.end();
+    }
+  }
+
   /** Send the batch in the background. Safe to call more than once; only the first sends. */
   flush(): void {
     if (!this.enabled || this.flushed || this.spans.length === 0) return;
@@ -240,4 +262,82 @@ export function anthropicUsageAttrs(usage: {
     "gen_ai.usage.cache_read.input_tokens": read || undefined,
     "gen_ai.usage.cache_write.input_tokens": write || undefined,
   };
+}
+
+/** The shape of an Anthropic Messages response that tracing reads. */
+type AnthropicMessage = {
+  id: string;
+  model: string;
+  stop_reason: string | null;
+  content: unknown;
+  usage: Parameters<typeof anthropicUsageAttrs>[0];
+};
+
+/**
+ * One Anthropic Messages call as an LLM span. `request` is what was sent
+ * (model, max_tokens, system, messages); `call` makes the request. The
+ * response is returned unchanged.
+ */
+export function tracedAnthropic<T extends AnthropicMessage>(
+  trace: Trace,
+  parent: Span | undefined,
+  request: { model: string; max_tokens?: number; system?: unknown; messages: unknown },
+  call: () => Promise<T>,
+): Promise<T> {
+  return trace.run(
+    `chat ${request.model}`,
+    {
+      "openinference.span.kind": "LLM",
+      "gen_ai.operation.name": "chat",
+      "gen_ai.provider.name": "anthropic",
+      "gen_ai.request.model": request.model,
+      "gen_ai.request.max_tokens": request.max_tokens,
+    },
+    parent,
+    async (span) => {
+      span.content(
+        "input",
+        request.system ? { system: request.system, messages: request.messages } : request.messages,
+      );
+      const message = await call();
+      span
+        .set({
+          "gen_ai.response.model": message.model,
+          "gen_ai.response.id": message.id,
+          "gen_ai.response.finish_reasons": message.stop_reason ?? undefined,
+          ...anthropicUsageAttrs(message.usage),
+        })
+        .content("output", message.content);
+      return message;
+    },
+  );
+}
+
+/**
+ * One OpenAI embeddings call as an EMBEDDING span. `call` makes the request
+ * and returns the vector plus the prompt_tokens OpenAI reported.
+ */
+export async function tracedEmbedding(
+  trace: Trace,
+  parent: Span | undefined,
+  model: string,
+  input: string,
+  call: () => Promise<{ embedding: number[]; tokens?: number }>,
+): Promise<number[]> {
+  return await trace.run(
+    `embeddings ${model}`,
+    {
+      "openinference.span.kind": "EMBEDDING",
+      "gen_ai.operation.name": "embeddings",
+      "gen_ai.provider.name": "openai",
+      "gen_ai.request.model": model,
+    },
+    parent,
+    async (span) => {
+      span.content("input", input);
+      const { embedding, tokens } = await call();
+      span.set({ "gen_ai.usage.input_tokens": tokens });
+      return embedding;
+    },
+  );
 }

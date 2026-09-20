@@ -16,9 +16,11 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { langevalConfigFromEnv, type Span, Trace, tracedAnthropic } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
 
+const LANGEVAL = langevalConfigFromEnv("aiwiki-discover-tools");
 const DAILY_COST_CAP_USD = 5.0;
 const MAX_URLS_PER_REQUEST = 20;
 
@@ -266,7 +268,14 @@ async function processUrl(
   url: string,
   catMap: Record<string, string>,
   supabaseAdmin: ReturnType<typeof createClient>,
+  trace: Trace,
+  parent: Span,
 ): Promise<{ url: string; slug: string | null; status: "inserted" | "updated" | "error"; error?: string }> {
+  // One span per URL. Failures are returned rather than thrown, so the span is
+  // marked failed by hand in the catch below.
+  const span = trace
+    .start("process_url", { "openinference.span.kind": "CHAIN" }, parent)
+    .content("input", url);
   try {
     // 1. Fetch page content
     const pageRes = await fetch(url, {
@@ -282,7 +291,7 @@ async function processUrl(
     const domain = domainFrom(url);
 
     // 2. Extract via Claude structured output
-    const message = await anthropic.messages.create({
+    const request: Anthropic.MessageCreateParamsNonStreaming = {
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
       system: `You are an AI tool directory curator. Extract accurate, factual information about AI tools from their website content. Be concise and precise. Never fabricate features or pricing.`,
@@ -305,11 +314,14 @@ Return the JSON schema I specified. For content sections (overview_technical, ov
         {
           name: "extract_tool_data",
           description: "Extract structured AI tool data from website content",
-          input_schema: TOOL_EXTRACTION_SCHEMA as Parameters<typeof anthropic.messages.create>[0]["tools"][0]["input_schema"],
+          input_schema: TOOL_EXTRACTION_SCHEMA as Anthropic.Tool["input_schema"],
         },
       ],
       tool_choice: { type: "tool", name: "extract_tool_data" },
-    });
+    };
+    const message = await tracedAnthropic(trace, span, request, () =>
+      anthropic.messages.create(request),
+    );
 
     // Log usage
     await supabaseAdmin.from("llm_usage").insert({
@@ -394,14 +406,18 @@ Return the JSON schema I specified. For content sections (overview_technical, ov
       blocks.map((b) => ({ tool_id: tool.id, ...b, heading: null }))
     );
 
+    span.set({ "aiwiki.slug": slug }).content("output", { slug, status: "inserted" });
     return { url, slug, status: "inserted" };
   } catch (err) {
+    span.fail(err);
     return {
       url,
       slug: null,
       status: "error",
       error: err instanceof Error ? err.message : String(err),
     };
+  } finally {
+    span.end();
   }
 }
 
@@ -474,16 +490,24 @@ Deno.serve(async (req) => {
     const { data: categories } = await supabaseAdmin.from("categories").select("id, slug");
     const catMap = Object.fromEntries((categories ?? []).map((c) => [c.slug, c.id]));
 
+    // One trace per batch, one child span per URL.
+    const trace = new Trace(LANGEVAL);
+    const root = trace
+      .start("discover-tools", { "openinference.span.kind": "CHAIN", "aiwiki.url_count": urls.length })
+      .content("input", urls);
+
     // Process URLs sequentially to avoid rate limits
     const results = [];
     for (const url of urls) {
-      const result = await processUrl(url, catMap, supabaseAdmin);
+      const result = await processUrl(url, catMap, supabaseAdmin, trace, root);
       results.push(result);
       console.log(`[discover-tools] ${result.status.toUpperCase()} ${url} → ${result.slug ?? result.error}`);
     }
 
     const succeeded = results.filter((r) => r.status !== "error").length;
     const errored = results.filter((r) => r.status === "error").length;
+    root.set({ "aiwiki.succeeded": succeeded, "aiwiki.errored": errored }).content("output", results).end();
+    trace.flush();
 
     return new Response(
       JSON.stringify({ results, summary: { succeeded, errored, total: urls.length } }),
