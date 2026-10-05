@@ -134,6 +134,11 @@ Every LLM call goes through [`llm.py`](enrichment/llm.py), which checks the
 daily cap (`ENRICH_DAILY_COST_CAP_USD`, summed across `enrich_%` features) and
 logs an `llm_usage` row. No node can bypass it.
 
+Calls also carry a request timeout (`ENRICH_LLM_TIMEOUT_S`, default 90s).
+Anthropic's default is no timeout, which let a stalled connection hang a run
+indefinitely; 90s x 3 attempts keeps a single node inside the 300s function
+budget. A hang now fails that tool (`AnthropicTimeoutError`, recorded on its job) and the batch moves on.
+
 ## Rollout
 
 1. Ship the migration; run this in **shadow mode** — enrich into drafts and diff

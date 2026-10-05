@@ -42,6 +42,10 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Enrichment LLM calls can no longer hang forever.** Anthropic's client
+  defaults to no request timeout; one stalled call held the 2026-10 batch on
+  textio.com for ~5h. Calls now time out after `ENRICH_LLM_TIMEOUT_S` (90s)
+  with 2 retries, so a hang fails that one tool and the batch moves on.
 - **Seed scripts no longer wipe enriched content.** `scripts/seed.ts` and
   `scripts/seed-bulk.ts` used to delete every content block for each tool and
   reset `status`/`published_at` on re-run, destroying enrichment-pipeline
