@@ -2,6 +2,13 @@
  * Seed script — populates 14 starter tools + content blocks.
  * Run via:  npm run db:seed
  * Requires: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env.local
+ *
+ * Non-destructive by default: only slugs missing from the DB are inserted
+ * (row + category + content blocks). Existing tools are skipped entirely so
+ * enrichment/admin edits to their fields and content blocks survive re-runs.
+ *
+ *   --update   also refresh the tool-row fields of existing slugs from this
+ *              file. Never touches status, published_at or content blocks.
  */
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -415,39 +422,68 @@ async function main() {
   }
 
   const catMap = Object.fromEntries(categories.map((c) => [c.slug, c.id]));
+  const update = process.argv.includes("--update");
+
+  // Existing slugs are skipped (or field-updated with --update) — never re-seeded.
+  const { data: existing, error: existErr } = await supabase
+    .from("tools")
+    .select("id, slug")
+    .in(
+      "slug",
+      TOOLS.map((t) => t.slug)
+    );
+
+  if (existErr || !existing) {
+    console.error("Failed to fetch existing tools:", existErr);
+    process.exit(1);
+  }
+
+  const existingIds = new Map(existing.map((e) => [e.slug, e.id]));
 
   for (const t of TOOLS) {
     process.stdout.write(`  → ${t.name}... `);
 
-    // Upsert the tool (skip if slug already exists)
+    const fields = {
+      name: t.name,
+      tagline: t.tagline,
+      website_url: t.website_url,
+      logo_url: t.logo_url,
+      primary_category_id: catMap[t.category_slug] ?? null,
+      pricing_tier: t.pricing_tier as "free" | "freemium" | "paid" | "enterprise",
+      has_free_tier: t.has_free_tier,
+      pricing_starts_at: t.pricing_starts_at ?? null,
+      pricing_currency: t.pricing_currency,
+      audience_fit: t.audience_fit as "technical" | "non_technical" | "both",
+      model_provider: t.model_provider,
+      open_source: t.open_source,
+      self_hostable: t.self_hostable,
+      api_available: t.api_available,
+      founded_year: t.founded_year ?? null,
+      hq_country: t.hq_country ?? null,
+      hq_city: t.hq_city ?? null,
+      key_strengths: [...t.key_strengths],
+    };
+
+    const existingId = existingIds.get(t.slug);
+
+    if (existingId) {
+      if (!update) {
+        console.log("exists, skipped");
+        continue;
+      }
+      const { error: updErr } = await supabase.from("tools").update(fields).eq("id", existingId);
+      console.log(updErr ? `✗ ${updErr.message}` : "fields updated");
+      continue;
+    }
+
     const { data: tool, error: toolErr } = await supabase
       .from("tools")
-      .upsert(
-        {
-          slug: t.slug,
-          name: t.name,
-          tagline: t.tagline,
-          website_url: t.website_url,
-          logo_url: t.logo_url,
-          primary_category_id: catMap[t.category_slug] ?? null,
-          pricing_tier: t.pricing_tier as "free" | "freemium" | "paid" | "enterprise",
-          has_free_tier: t.has_free_tier,
-          pricing_starts_at: t.pricing_starts_at ?? null,
-          pricing_currency: t.pricing_currency,
-          audience_fit: t.audience_fit as "technical" | "non_technical" | "both",
-          model_provider: t.model_provider,
-          open_source: t.open_source,
-          self_hostable: t.self_hostable,
-          api_available: t.api_available,
-          founded_year: t.founded_year ?? null,
-          hq_country: t.hq_country ?? null,
-          hq_city: t.hq_city ?? null,
-          key_strengths: [...t.key_strengths],
-          status: "published",
-          published_at: new Date().toISOString(),
-        },
-        { onConflict: "slug", ignoreDuplicates: false }
-      )
+      .insert({
+        slug: t.slug,
+        ...fields,
+        status: "published",
+        published_at: new Date().toISOString(),
+      })
       .select("id")
       .single();
 
@@ -462,9 +498,7 @@ async function main() {
       { onConflict: "tool_id,category_id", ignoreDuplicates: true }
     );
 
-    // Replace content blocks (delete + insert)
-    await supabase.from("content_blocks").delete().eq("tool_id", tool.id);
-
+    // Content blocks (new tool, so there is nothing to replace)
     const blocks = [
       { section: "overview", audience: "technical", body_md: t.overview_technical, sort_order: 0 },
       { section: "overview", audience: "non_technical", body_md: t.overview_general, sort_order: 1 },
