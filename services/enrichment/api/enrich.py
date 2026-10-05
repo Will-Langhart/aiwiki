@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler
 
-from enrichment.runner import poll_and_run, run_job, run_url
+from enrichment.runner import poll_and_run, run_job, run_refresh, run_url
 
 
 class handler(BaseHTTPRequestHandler):
@@ -28,7 +28,14 @@ class handler(BaseHTTPRequestHandler):
             # Supabase DB webhook shape: { type, table, record: {...} }
             record = payload.get("record")
             if record and record.get("id") and record.get("url"):
-                run_job(record["id"], record["url"])
+                # Only queued rows are work. CLI refreshes insert their own job
+                # row as 'running' and must not be picked up a second time.
+                if record.get("status", "queued") != "queued":
+                    return self._send(200, {"skipped": record["id"], "status": record.get("status")})
+                if record.get("mode") == "refresh" and record.get("tool_id"):
+                    run_refresh(record["tool_id"], job_id=record["id"])
+                else:
+                    run_job(record["id"], record["url"])
                 return self._send(200, {"ran_job": record["id"]})
 
             if payload.get("poll"):

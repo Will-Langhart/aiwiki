@@ -31,7 +31,7 @@ ingest → extract → categorize → verify → write → critique ──┐
 | `verify` | Deterministic evidence gate + LLM support check; nulls unsupported facts | Sonnet | `enrich_verify` |
 | `write` | 6 dual-audience blocks grounded **only** on the verified fact sheet | Sonnet | `enrich_write` |
 | `critique` | Flags prose claims absent from the fact sheet; loops back to `write` | Haiku | `enrich_critique` |
-| `persist` | Upsert `tools` (status=`draft`) + 6 `content_blocks` | — | — |
+| `persist` | **create:** insert `tools` (status=`draft`) + 6 `content_blocks` · **refresh:** auto-apply or propose (below) | — | — |
 
 **The anti-fabrication mechanism** is the evidence envelope in
 [`state.py`](enrichment/state.py): every fact is `{value, evidence, confidence}`,
@@ -62,6 +62,49 @@ uv run enrich https://www.langchain.com
 # Drain queued jobs from enrichment_jobs
 uv run enrich --poll
 ```
+
+## Refresh existing tools
+
+Refresh mode re-runs the same graph against an **already-published** tool's
+website and writes the result **in place** — the tool stays published; slug,
+name, category, website, logo, `status` and `published_at` are never touched.
+Logic lives in [`refresh.py`](enrichment/refresh.py).
+
+```bash
+uv run enrich --refresh cursor perplexity            # specific tools (slug or id)
+uv run enrich --refresh-batch 25                     # most in need first
+uv run enrich --refresh-batch 5 --dry-run            # print the diff, write nothing
+uv run enrich --apply-job <job_id>                   # apply a reviewed proposal
+```
+
+**Auto-apply if verified.** A refresh is written live only when *all* hold:
+
+- the tool is not `edited_by_admin` (human edits are never overwritten),
+- the critic approved the final prose (no unsupported claims after retries),
+- the verifier's confidence ≥ `ENRICH_REFRESH_MIN_CONFIDENCE` (default `0.7`),
+- the name on the site still matches the tool (guards against a domain that
+  changed hands).
+
+Anything else lands in `needs_review` with the full proposal (field diff with
+evidence, the six blocks, and the blocking reasons) on `enrichment_jobs.proposal`.
+
+**Merge rules.** Only facts that survived the evidence gate are candidates; a
+null fact never overwrites an existing value; fields the advisory critic doubted
+are withheld; only the six graph-owned blocks (`overview`/`docs`/`use_cases`)
+are replaced — insert-then-delete, so a failure never leaves a tool blank.
+
+**Batch order** (`--refresh-batch`): tools with no content blocks → overview-only
+→ everything else, oldest `updated_at` first; tools refreshed in the last 30
+days are skipped. Batches stop cleanly at the daily cost cap (~$0.08/tool, so
+the default $5 cap ≈ 60 tools/day — raise `ENRICH_DAILY_COST_CAP_USD` for a
+one-off backfill). Refreshes don't trigger a Vercel rebuild (only a
+→`published` status change does), so **deploy once after a batch** for the
+prerendered pages to pick up the new content.
+
+**New tools from a list.** `uv run enrich --file urls.txt` runs create mode per
+URL. A URL matching an existing tool's website is skipped before any LLM spend,
+and create mode refuses to write onto an existing slug — it can no longer
+unpublish a live tool.
 
 ## Calibrate: shadow-diff (old vs new)
 
