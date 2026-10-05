@@ -51,6 +51,21 @@ def run_url(url: str, job_id: str | None = None, dry_run: bool = False) -> Enric
     return _graph().invoke(initial, {"recursion_limit": 25})
 
 
+def _require_refresh_schema(sb) -> None:
+    """Fail clearly if migration 0029 isn't applied.
+
+    Without the column, PostgREST resolves `mode` to Postgres's mode() aggregate
+    and returns the baffling "WITHIN GROUP is required" error instead.
+    """
+    try:
+        sb.table("enrichment_jobs").select("mode,proposal,applied_fields").limit(1).execute()
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            "Refresh mode needs migration 0029_enrichment_refresh_mode.sql — "
+            f"apply it to this database first ({exc})"
+        ) from None
+
+
 def _load_tool(ref: str) -> dict:
     """A tools row by id or slug."""
     sb = get_supabase()
@@ -69,8 +84,9 @@ def run_refresh(ref: str, dry_run: bool = False, job_id: str | None = None) -> E
 
     Records an enrichment_jobs row (mode='refresh') unless dry_run.
     """
-    tool = _load_tool(ref)
     sb = get_supabase()
+    _require_refresh_schema(sb)
+    tool = _load_tool(ref)
     if not dry_run and job_id is None:
         job_id = (
             sb.table("enrichment_jobs")
@@ -122,6 +138,7 @@ def select_refresh_batch(limit: int, skip_days: int = 30) -> list[dict]:
     `skip_days` days are skipped, so a failed or parked tool isn't retried daily.
     """
     sb = get_supabase()
+    _require_refresh_schema(sb)
     tools = _all(sb, "tools", "id,slug,name,updated_at", status="published")
     blocks = _all(sb, "content_blocks", "tool_id")
     since = (datetime.now(timezone.utc) - timedelta(days=skip_days)).isoformat()
