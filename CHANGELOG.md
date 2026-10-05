@@ -42,6 +42,11 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Browse page dropped tools past 500.** `/tools` requested `page_size: 500`,
+  so once the catalog reached 552 published tools the unfiltered grid silently
+  lost the last 52 (T–Z, e.g. tldraw, Tome, Zed, Warp). Raised to 1000 (the
+  PostgREST `max_rows` ceiling); the search placeholder now shows the real
+  count instead of a hardcoded "463".
 - **Enrichment LLM calls can no longer hang forever.** Anthropic's client
   defaults to no request timeout; one stalled call held the 2026-10 batch on
   textio.com for ~5h. Calls now time out after `ENRICH_LLM_TIMEOUT_S` (90s)
