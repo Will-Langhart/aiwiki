@@ -32,6 +32,12 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Seed scripts no longer wipe enriched content.** `scripts/seed.ts` and
+  `scripts/seed-bulk.ts` used to delete every content block for each tool and
+  reset `status`/`published_at` on re-run, destroying enrichment-pipeline
+  output (19 bulk tools had docs/use-case/overview blocks at risk). They now
+  insert only missing slugs and skip existing ones; `--update` refreshes tool
+  fields only, never content blocks, status or publish date.
 - **Auth modal on `/chat`.** The chat route (which lives outside `AppShell`) now
   renders `AuthModal`, so the sidebar "Sign in" button and the new
   save-to-bookmarks prompt actually open a dialog — previously they set store
