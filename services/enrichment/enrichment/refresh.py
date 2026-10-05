@@ -129,6 +129,8 @@ def diff_fields(state: EnrichmentState) -> tuple[dict, list[str]]:
             continue
         if col == "github_stars" and not (facts.open_source.value or existing.get("open_source")):
             continue  # an org's side repo, not the product (e.g. you.com's agent-skills)
+        if col in ("github_stars", "open_source") and not repo_matches_tool(fact.evidence, existing):
+            continue  # the company's repo, not the product (Anyscale ← ray-project/ray)
         if col == "pricing_starts_at" and is_unit_rate(fact.evidence):
             continue
         if col in doubted:
@@ -149,6 +151,26 @@ _UNIT_RATE = re.compile(
 def is_unit_rate(evidence: str | None) -> bool:
     """True when a price quote is a usage rate ($1 / 1k pages), not a plan price."""
     return bool(evidence and _UNIT_RATE.search(evidence))
+
+
+_GH_REPO = re.compile(r"GitHub API \(authoritative\) for ([\w.-]+)/([\w.-]+)")
+
+
+def repo_matches_tool(evidence: str | None, tool: dict) -> bool:
+    """True unless the evidence is a GitHub repo that isn't this tool's own.
+
+    Evidence quoted from the tool's own site ("we're open source") passes; a
+    GitHub-API quote passes only when the repo owner or name matches the tool's
+    name, slug or domain.
+    """
+    m = _GH_REPO.search(evidence or "")
+    if not m:
+        return True
+    repo_keys = {_norm_name(m.group(1)), _norm_name(m.group(2))}
+    domain = re.sub(r"^https?://(www\.)?", "", (tool.get("website_url") or "").lower()).split("/")[0]
+    tool_keys = {_norm_name(tool.get("name", "")), _norm_name(tool.get("slug", "")), _norm_name(domain.split(".")[0])}
+    tool_keys.discard("")
+    return any(r and t and (r in t or t in r) for r in repo_keys for t in tool_keys)
 
 
 def _same(old, new) -> bool:

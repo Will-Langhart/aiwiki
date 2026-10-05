@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from .refresh import is_unit_rate
+from .refresh import is_unit_rate, repo_matches_tool
 from .state import EnrichmentState, ExtractedFacts
 from .supabase_client import get_supabase
 
@@ -122,10 +122,13 @@ def persist_draft(state: EnrichmentState) -> str:
         "pricing_detail": _v(facts, "pricing_detail"),
         "audience_fit": _enum(_v(facts, "audience_fit"), _AUDIENCES, "both"),
         "model_provider": _v(facts, "model_provider"),
-        "open_source": bool(_v(facts, "open_source")),
+        "open_source": bool(_v(facts, "open_source")) and repo_matches_tool(facts.open_source.evidence, {"name": name, "slug": slug, "website_url": url}),
         "self_hostable": bool(_v(facts, "self_hostable")),
         "api_available": bool(_v(facts, "api_available")),
-        "github_stars": _v(facts, "github_stars") if _v(facts, "open_source") else None,
+        "github_stars": _v(facts, "github_stars")
+        if _v(facts, "open_source")
+        and repo_matches_tool(facts.github_stars.evidence, {"name": name, "slug": slug, "website_url": url})
+        else None,
         "integrations": _v(facts, "integrations") or [],
         "traffic_tier": _enum(_v(facts, "traffic_tier"), _TRAFFIC, None),
         "founded_year": _v(facts, "founded_year"),
