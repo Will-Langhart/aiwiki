@@ -60,6 +60,10 @@ _ENUMS = {
     "traffic_tier": {"small", "medium", "large", "xlarge"},
 }
 
+# Only filled when the existing value is empty. A homepage slogan ("The AI Native
+# Cloud") is a worse directory tagline than the descriptive one already curated.
+FILL_ONLY_FIELDS = {"tagline"}
+
 # The six blocks the graph writes. Blocks in any other section are left alone.
 CONTENT_SECTIONS = ("overview", "docs", "use_cases")
 
@@ -121,12 +125,30 @@ def diff_fields(state: EnrichmentState) -> tuple[dict, list[str]]:
         old = existing.get(col)
         if _same(old, new):
             continue
+        if col in FILL_ONLY_FIELDS and not _empty(old):
+            continue
+        if col == "github_stars" and not (facts.open_source.value or existing.get("open_source")):
+            continue  # an org's side repo, not the product (e.g. you.com's agent-skills)
+        if col == "pricing_starts_at" and is_unit_rate(fact.evidence):
+            continue
         if col in doubted:
             withheld.append(col)
             continue
         changes[col] = {"old": old, "new": new, "evidence": fact.evidence}
 
     return changes, withheld
+
+
+_UNIT_RATE = re.compile(
+    r"/\s*(1k|1m|1,000|1,000,000|k|m|mtok|token|call|request|page|min|minute|hour|image|second)s?\b"
+    r"|\bper\s+(1k|1m|thousand|million|token|call|request|page|minute|hour|image|second)",
+    re.IGNORECASE,
+)
+
+
+def is_unit_rate(evidence: str | None) -> bool:
+    """True when a price quote is a usage rate ($1 / 1k pages), not a plan price."""
+    return bool(evidence and _UNIT_RATE.search(evidence))
 
 
 def _same(old, new) -> bool:

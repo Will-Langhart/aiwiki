@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
+from .refresh import is_unit_rate
 from .state import EnrichmentState, ExtractedFacts
 from .supabase_client import get_supabase
 
@@ -116,7 +117,7 @@ def persist_draft(state: EnrichmentState) -> str:
         "primary_category_id": cat_id,
         "pricing_tier": pricing_tier,
         "has_free_tier": bool(has_free_tier),
-        "pricing_starts_at": _v(facts, "pricing_starts_at"),
+        "pricing_starts_at": None if is_unit_rate(facts.pricing_starts_at.evidence) else _v(facts, "pricing_starts_at"),
         "pricing_currency": "USD",
         "pricing_detail": _v(facts, "pricing_detail"),
         "audience_fit": _enum(_v(facts, "audience_fit"), _AUDIENCES, "both"),
@@ -124,7 +125,7 @@ def persist_draft(state: EnrichmentState) -> str:
         "open_source": bool(_v(facts, "open_source")),
         "self_hostable": bool(_v(facts, "self_hostable")),
         "api_available": bool(_v(facts, "api_available")),
-        "github_stars": _v(facts, "github_stars"),
+        "github_stars": _v(facts, "github_stars") if _v(facts, "open_source") else None,
         "integrations": _v(facts, "integrations") or [],
         "traffic_tier": _enum(_v(facts, "traffic_tier"), _TRAFFIC, None),
         "founded_year": _v(facts, "founded_year"),
