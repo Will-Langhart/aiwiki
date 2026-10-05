@@ -109,21 +109,61 @@ class CategoryChoice(BaseModel):
     slug: str = Field(description="The single best-fit category slug from the provided list.")
 
 
+# Most rows in public.categories have no description, and a bare name like
+# "Automation & agents" invites mis-filing (a chat app with "agentic" features
+# isn't an automation tool). These hints are used only where the DB has none.
+_CATEGORY_HINTS = {
+    "chat-assistants": "General-purpose conversational AI apps and LLM chat interfaces (ChatGPT, Qwen, Kimi), incl. desktop/local chat clients",
+    "coding": "Tools developers use to write code: IDEs/editors, terminals, coding agents, code review, AI app builders that output code",
+    "infrastructure": "Model inference APIs, GPU clouds, LLM gateways/routers, hosting for models — sold to developers as backend infrastructure",
+    "automation": "Workflow automation and business-process agents that connect apps (Zapier, n8n) — not chat apps or coding agents",
+    "agent-frameworks": "Code libraries/SDKs developers import to build agents (LangGraph, CrewAI) — not end-user agent products",
+    "video": "Generate or edit video, avatars, clips",
+    "image-generation": "Generate or edit images and art",
+    "audio-music": "Music generation, stem separation, audio editing",
+    "voice": "Text-to-speech, speech-to-text, voice agents and phone/voice AI platforms",
+    "writing": "Writing, copy, editing and long-form text tools",
+    "presentations-docs": "Slide decks, documents, diagrams",
+    "design": "UI/UX, branding, graphic design tools",
+    "data-analytics": "Spreadsheet, BI and data-analysis assistants",
+    "search-research": "AI search engines, research assistants, web data/search APIs",
+    "productivity": "Notes, tasks, calendars, knowledge management, launchers",
+    "customer-support": "Support agents, helpdesk and customer-service AI",
+    "education": "Learning, tutoring and teaching tools",
+    "security": "Security for or with AI: LLM guardrails, SOC automation, threat detection",
+    "legal": "Legal research, contracts, compliance",
+    "hr-recruiting": "Sourcing, interviewing, recruiting and HR",
+    "finance": "Accounting, finance research, FP&A, spend",
+    "healthcare": "Clinical, medical scribing, biotech",
+    "marketing-sales": "Marketing content, SEO/AI visibility, ads, sales outreach and SDR agents",
+    "no-code": "No-code/low-code website and app builders for non-developers",
+}
+
+
 def categorize_node(state: EnrichmentState) -> EnrichmentState:
     # Ground the choice in the live category list (not free text).
     sb = get_supabase()
     rows = sb.table("categories").select("slug,name,description").execute().data or []
     valid = {r["slug"] for r in rows} or set(CATEGORY_SLUGS)
-    listing = "\n".join(f"- {r['slug']}: {r.get('name','')} — {r.get('description') or ''}" for r in rows) or \
-        "\n".join(f"- {s}" for s in CATEGORY_SLUGS)
+    listing = "\n".join(
+        f"- {r['slug']}: {r.get('name','')} — {r.get('description') or _CATEGORY_HINTS.get(r['slug'], '')}"
+        for r in rows
+    ) or "\n".join(f"- {s}: {_CATEGORY_HINTS.get(s, '')}" for s in CATEGORY_SLUGS)
 
     facts = state["facts"]
     summary = f"{facts.name.value or ''} — {facts.tagline.value or ''}. Strengths: {', '.join(facts.key_strengths.value)}"
+    # The tagline alone is often a slogan ("Your last next editor"); give the
+    # classifier the start of the homepage so it sees what the product is.
+    excerpt = _sources_blob(state, limit=2_500)
     choice = call_structured(
         node="categorize",
         feature="enrich_categorize",
-        system="Classify the tool into exactly one category slug from the list. Return only a slug that appears in the list.",
-        user=f"Tool: {summary}\n\nCategories:\n{listing}",
+        system=(
+            "Classify the tool into exactly one category slug from the list, by what the "
+            "product primarily IS and who buys it — not by buzzwords it mentions "
+            "(most products now say 'agent'). Return only a slug that appears in the list."
+        ),
+        user=f"Tool: {summary}\n\nHomepage excerpt:\n{excerpt}\n\nCategories:\n{listing}",
         schema=CategoryChoice,
         max_tokens=64,
     )
@@ -295,4 +335,5 @@ def persist_node(state: EnrichmentState) -> EnrichmentState:
         tool_id = persist_draft(state)
     except DuplicateToolError as exc:
         return {"tool_id": None, "status": "failed", "error": str(exc)}
-    return {"tool_id": tool_id, "status": "needs_review"}
+    flags = [] if state["facts"].tagline.value else ["tagline: none found on site; used first sentence of overview"]
+    return {"tool_id": tool_id, "status": "needs_review", "flags": flags}

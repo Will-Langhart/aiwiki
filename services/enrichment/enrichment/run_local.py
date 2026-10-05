@@ -30,7 +30,7 @@ import sys
 from dotenv import load_dotenv
 
 from .llm import DailyCapExceeded
-from .runner import apply_job, poll_and_run, run_refresh, run_url, select_refresh_batch
+from .runner import apply_job, poll_and_run, run_new, run_refresh, run_url, select_refresh_batch
 
 
 def _print(obj: dict) -> None:
@@ -77,14 +77,14 @@ def _create_many(path: str) -> None:
     for i, url in enumerate(urls, 1):
         print(f"[{i}/{len(urls)}] {url}", file=sys.stderr)
         try:
-            final = run_url(url)
+            final = run_new(url)
         except DailyCapExceeded as exc:
             print(f"Stopping: {exc}", file=sys.stderr)
             break
         except Exception as exc:  # noqa: BLE001
             final = {"status": "failed", "error": str(exc)}
         status = final.get("status") or "failed"
-        if status == "failed" and (final.get("error") or "").startswith(("duplicate", "slug")):
+        if status == "failed" and ("duplicate" in (final.get("error") or "") or "already exists" in (final.get("error") or "")):
             status = "duplicate"
         _print({"url": url, "status": status, "tool_id": final.get("tool_id"),
                 "confidence": final.get("confidence"), "error": final.get("error")})

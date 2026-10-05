@@ -73,6 +73,13 @@ def _v(facts: ExtractedFacts, name: str):
     return getattr(getattr(facts, name), "value", None)
 
 
+def _first_sentence(text: str, limit: int = 140) -> str:
+    """Tagline fallback: the first sentence of the verified, critic-checked prose."""
+    plain = re.sub(r"[#*_`>\[\]]|\(https?://[^)]*\)", "", text or "").strip()
+    sentence = re.split(r"(?<=[.!?])\s", plain, maxsplit=1)[0].strip()
+    return sentence if len(sentence) <= limit else sentence[: limit - 1].rsplit(" ", 1)[0] + "…"
+
+
 def _enum(value, allowed: set[str], default: str | None):
     return value if value in allowed else default
 
@@ -93,15 +100,22 @@ def persist_draft(state: EnrichmentState) -> str:
         cat = sb.table("categories").select("id").eq("slug", cat_slug).maybe_single().execute()
         cat_id = (cat.data or {}).get("id") if cat.data else None
 
+    pricing_tier = _enum(_v(facts, "pricing_tier"), _PRICING_TIERS, "freemium")
+    # has_free_tier is NOT NULL; an unknown value follows the tier instead of
+    # silently becoming False (which contradicted "freemium" on most drafts).
+    has_free_tier = _v(facts, "has_free_tier")
+    if has_free_tier is None:
+        has_free_tier = pricing_tier in ("free", "freemium")
+
     row = {
         "slug": slug,
         "name": name,
-        "tagline": _v(facts, "tagline") or "",
+        "tagline": _v(facts, "tagline") or _first_sentence(state["content"].overview_general),
         "website_url": url,
         "logo_url": f"https://icon.horse/icon/{domain}",
         "primary_category_id": cat_id,
-        "pricing_tier": _enum(_v(facts, "pricing_tier"), _PRICING_TIERS, "freemium"),
-        "has_free_tier": bool(_v(facts, "has_free_tier")),
+        "pricing_tier": pricing_tier,
+        "has_free_tier": bool(has_free_tier),
         "pricing_starts_at": _v(facts, "pricing_starts_at"),
         "pricing_currency": "USD",
         "pricing_detail": _v(facts, "pricing_detail"),

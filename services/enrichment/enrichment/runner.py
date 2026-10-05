@@ -169,7 +169,20 @@ def _all(sb, table: str, cols: str, gte: tuple[str, str] | None = None, **eq) ->
         start += 1000
 
 
-def run_job(job_id: str, url: str) -> None:
+def run_new(url: str) -> EnrichmentState:
+    """Create-mode run for one URL with an enrichment_jobs row as its review record.
+
+    Duplicates are rejected before the job row is created, so they leave no trace.
+    """
+    dup = find_existing_tool(url)
+    if dup:
+        return {"status": "failed", "error": f"duplicate of existing tool '{dup['slug']}' ({dup['website_url']})"}
+    sb = get_supabase()
+    job_id = sb.table("enrichment_jobs").insert({"url": url, "mode": "create", "status": "queued"}).execute().data[0]["id"]
+    return run_job(job_id, url)
+
+
+def run_job(job_id: str, url: str) -> EnrichmentState:
     """Run one enrichment_jobs row end-to-end, updating its status."""
     sb = get_supabase()
     sb.table("enrichment_jobs").update(
@@ -180,7 +193,7 @@ def run_job(job_id: str, url: str) -> None:
         final = run_url(url, job_id=job_id)
         if final.get("status") == "failed":
             _finish(sb, job_id, "failed", error=final.get("error"), flags=final.get("flags"))
-            return
+            return final
         _finish(
             sb,
             job_id,
@@ -189,6 +202,7 @@ def run_job(job_id: str, url: str) -> None:
             confidence=final.get("confidence"),
             flags=final.get("flags"),
         )
+        return final
     except Exception as exc:  # noqa: BLE001 — record any failure on the job row
         _finish(sb, job_id, "failed", error=str(exc))
         raise
