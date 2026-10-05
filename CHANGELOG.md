@@ -7,6 +7,8 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Agent QA seed entry.** Add YAML-based web and mobile regression testing to
+  the Coding & development catalog, with software license and provider costs.
 - **Chat funnel analytics.** New typed, centralized analytics module
   (`app/lib/analytics.ts`) wrapping Vercel Web Analytics custom events, with
   privacy-preserving channel resolution (referrer host → enum; never PII, raw
