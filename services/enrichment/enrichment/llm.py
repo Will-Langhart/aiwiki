@@ -34,6 +34,33 @@ _PRICING: dict[str, tuple[float, float]] = {
 _DEFAULT_PRICE = (3.0, 15.0)
 
 
+# Anthropic's own default is `default_request_timeout=None` — no timeout at all,
+# which lets a stalled connection hang the whole graph. Observed once at >10min
+# on a single call with zero bytes moving and the process at 0% CPU, and again
+# for ~5h on textio.com during the 2026-10 batch (no usage row was ever logged).
+#
+# Sizing: the slowest node (write) asks for 3072 tokens, ~50-60s of generation,
+# so 90s is comfortable headroom on the worst legitimate call. The retry
+# multiplier is the real constraint — 90 x 3 attempts = 270s keeps any single
+# node under the 300s function budget (see README "Deployment"), which 120s
+# would not have.
+#
+# This does NOT make a pathological run fit: one invocation runs 5+ sequential
+# calls, so several slow ones still exceed 300s and the platform timeout remains
+# the outer backstop. What this buys is that a hang is now bounded and raised as
+# a timeout error (AnthropicTimeoutError) rather than silently holding the
+# process forever. The runner records it as a failed job and batches move on.
+_DEFAULT_TIMEOUT_S = 90.0
+
+# Anthropic's default is also 2; set explicitly because it is what bounds the
+# worst case above — a node can take _timeout_s() x (_MAX_RETRIES + 1).
+_MAX_RETRIES = 2
+
+
+def _timeout_s() -> float:
+    return float(os.environ.get("ENRICH_LLM_TIMEOUT_S", _DEFAULT_TIMEOUT_S))
+
+
 def _model_for(node: str) -> str:
     return {
         "extract": os.environ.get("MODEL_EXTRACT", "claude-sonnet-4-6"),
@@ -100,7 +127,13 @@ def call_structured(
     _assert_under_cap()
     model_id = _model_for(node)
 
-    llm = ChatAnthropic(model=model_id, max_tokens=max_tokens, temperature=0)
+    llm = ChatAnthropic(
+        model=model_id,
+        max_tokens=max_tokens,
+        temperature=0,
+        timeout=_timeout_s(),
+        max_retries=_MAX_RETRIES,
+    )
     structured = llm.with_structured_output(schema, include_raw=True)
     result = structured.invoke(
         [("system", system), ("human", user)]
