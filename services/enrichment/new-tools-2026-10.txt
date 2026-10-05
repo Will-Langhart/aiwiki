@@ -1,0 +1,130 @@
+# 100 new AI tools for create-mode enrichment (2026-10). Deduped against the
+# catalog by website and probed for HTTP 200; parked/acquired/renamed sites dropped.
+# Run: uv run enrich --file new-tools-2026-10.txt
+# chat-assistants
+https://chat.qwen.ai
+https://www.kimi.com
+https://chat.z.ai
+https://msty.ai
+# coding
+https://zed.dev
+https://www.warp.dev
+https://kiro.dev
+https://www.trae.ai
+# image-generation
+https://playgroundai.com
+https://www.recraft.ai
+https://www.seaart.ai
+https://www.artbreeder.com
+# video
+https://higgsfield.ai
+https://www.vidu.com
+https://ltx.io
+https://www.d-id.com
+# audio-music
+https://mubert.com
+https://www.beatoven.ai
+https://www.stableaudio.com
+https://www.lalal.ai
+# voice
+https://vapi.ai
+https://www.retellai.com
+https://www.bland.ai
+https://www.hume.ai
+# search-research
+https://liner.com
+https://iask.ai
+https://www.tavily.com
+https://www.firecrawl.dev
+# writing
+https://lex.page
+https://novelai.net
+https://writer.com
+https://textcortex.com
+# presentations-docs
+https://pitch.com
+https://prezi.com
+https://www.presentations.ai
+https://www.napkin.ai
+# design
+https://www.visily.ai
+https://www.kittl.com
+https://stitch.withgoogle.com
+# data-analytics
+https://numerous.ai
+https://vanna.ai
+https://equals.com
+# automation
+https://pipedream.com
+https://www.browse.ai
+https://axiom.ai
+https://www.langflow.org
+# infrastructure
+https://www.cerebras.ai
+https://sambanova.ai
+https://deepinfra.com
+https://openrouter.ai
+# vector-databases
+https://lancedb.com
+https://milvus.io
+https://typesense.org
+# mlops-training
+https://unsloth.ai
+https://labelstud.io
+https://cleanlab.ai
+https://docs.vllm.ai
+# agent-frameworks
+https://mastra.ai
+https://github.com/stanfordnlp/dspy
+https://www.camel-ai.org
+https://composio.dev
+# ai-observability
+https://www.patronus.ai
+https://www.confident-ai.com
+https://www.honeyhive.ai
+https://lunary.ai
+# productivity
+https://saner.ai
+https://tana.inc
+https://heptabase.com
+https://www.sunsama.com
+# customer-support
+https://sierra.ai
+https://decagon.ai
+https://www.chatbase.co
+https://www.siena.cx
+# education
+https://www.briskteaching.com
+https://www.eduaide.ai
+https://www.speak.com
+https://praktika.ai
+# security
+https://www.lakera.ai
+https://hiddenlayer.com
+https://www.dropzone.ai
+https://www.prophetsecurity.ai
+# legal
+https://legora.com
+https://www.eve.legal
+https://www.supio.com
+https://www.darrow.ai
+# hr-recruiting
+https://juicebox.ai
+https://brighthire.com
+https://textio.com
+# finance
+https://rogo.com
+https://www.numeric.io
+https://www.trullion.com
+# healthcare
+https://glass.health
+https://www.hippocraticai.com
+https://www.heidihealth.com
+# marketing-sales
+https://www.tryprofound.com
+https://www.airops.com
+https://www.typeface.ai
+# no-code
+https://durable.com
+https://10web.io
+https://www.softgen.ai
