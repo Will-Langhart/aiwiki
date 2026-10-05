@@ -100,7 +100,9 @@ def extract_facts_node(state: EnrichmentState) -> EnrichmentState:
         system=_EXTRACT_SYSTEM,
         user=user,
         schema=ExtractedFacts,
-        max_tokens=2048,
+        # 18 fact envelopes, each with a verbatim evidence quote: long homepages
+        # (dropzone.ai) ran past 2048 and truncated the last field.
+        max_tokens=4096,
     )
     return {"facts": facts}
 
