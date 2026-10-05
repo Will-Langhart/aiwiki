@@ -87,7 +87,10 @@ async function fetchTools(
     audiences: params.audiences.length > 0 ? params.audiences : undefined,
     has_api: params.api ?? undefined,
     open_source: params.oss ?? undefined,
-    page_size: 500,
+    // The directory renders every published tool in one grid. 500 silently
+    // dropped T–Z once the catalog passed it (552 on 2026-10-05); 1000 is the
+    // PostgREST max_rows ceiling (supabase/config.toml).
+    page_size: 1000,
     page_offset: 0,
   });
   if (error) throw new Error(error.message);
@@ -221,7 +224,7 @@ export default function ToolsIndex() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-accent transition-colors pointer-events-none" size={16} />
           <Input
             type="search"
-            placeholder="Search 463 AI tools by name, category, or use case…"
+            placeholder={`Search ${initial.tools.length} AI tools by name, category, or use case…`}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="pl-11 pr-24 h-12 text-sm bg-bg border-border/70 focus:border-accent/60 focus:ring-2 focus:ring-accent/10 transition-all rounded-lg"
