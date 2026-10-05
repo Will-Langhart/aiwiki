@@ -62,7 +62,9 @@ _ENUMS = {
 
 # Only filled when the existing value is empty. A homepage slogan ("The AI Native
 # Cloud") is a worse directory tagline than the descriptive one already curated.
-FILL_ONLY_FIELDS = {"tagline"}
+# Same for founded_year (GitHub repo-creation year isn't the founding year —
+# Semgrep 2020→2019) and hq_country (only churned "USA" → "United States").
+FILL_ONLY_FIELDS = {"tagline", "founded_year", "hq_country"}
 
 # The six blocks the graph writes. Blocks in any other section are left alone.
 CONTENT_SECTIONS = ("overview", "docs", "use_cases")
@@ -160,17 +162,19 @@ def repo_matches_tool(evidence: str | None, tool: dict) -> bool:
     """True unless the evidence is a GitHub repo that isn't this tool's own.
 
     Evidence quoted from the tool's own site ("we're open source") passes; a
-    GitHub-API quote passes only when the repo owner or name matches the tool's
-    name, slug or domain.
+    GitHub-API quote passes only when the repo NAME equals the tool's name, slug
+    or domain stem. The owner doesn't count: every company's side repos share it
+    (stackhawk/agent-skills, SocketDev/socket-cli, aquasecurity/trivy).
     """
     m = _GH_REPO.search(evidence or "")
     if not m:
         return True
-    repo_keys = {_norm_name(m.group(1)), _norm_name(m.group(2))}
+    repo = _norm_name(m.group(2))
     domain = re.sub(r"^https?://(www\.)?", "", (tool.get("website_url") or "").lower()).split("/")[0]
     tool_keys = {_norm_name(tool.get("name", "")), _norm_name(tool.get("slug", "")), _norm_name(domain.split(".")[0])}
+    tool_keys |= {k.removesuffix("ai") for k in tool_keys if len(k) > 4}
     tool_keys.discard("")
-    return any(r and t and (r in t or t in r) for r in repo_keys for t in tool_keys)
+    return repo in tool_keys
 
 
 def _same(old, new) -> bool:
