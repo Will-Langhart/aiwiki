@@ -115,6 +115,10 @@ class EnrichmentState(TypedDict, total=False):
     job_id: str
     url: str
     dry_run: bool  # skip the DB write in persist (used by shadow-diff)
+    # "create" (default): new tool → draft. "refresh": re-enrich the existing
+    # tool `tool_id` in place — see refresh.py for the auto-apply rules.
+    mode: Literal["create", "refresh"]
+    existing: dict  # refresh only: the current tools row, loaded by the runner
     raw_sources: list[Source]
 
     facts: ExtractedFacts
@@ -129,5 +133,7 @@ class EnrichmentState(TypedDict, total=False):
 
     # terminal
     tool_id: Optional[str]
-    status: Literal["needs_review", "failed"]
+    status: Literal["needs_review", "applied", "failed"]
     error: Optional[str]
+    proposal: Optional[dict]  # refresh only: diff + content, stored on the job row
+    applied_fields: list[str]  # refresh only: columns actually written

@@ -7,6 +7,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Enrichment refresh mode.** `uv run enrich --refresh <slug>` /
+  `--refresh-batch N` re-enriches published tools in place and auto-applies
+  the result when verified (not admin-edited, critic-approved, confidence ≥ 0.7,
+  name still matches); otherwise parks a proposal on `enrichment_jobs` for
+  `--apply-job`. Never changes status, publish date, slug, name, category or
+  logo; never overwrites a value with null. Migration `0029` adds
+  `enrichment_jobs.mode/proposal/applied_fields` and the `applied` status.
+  **SPEC §10.6 updated** — the pipeline can now write to published tools.
+- **Batch new-tool enrichment.** `uv run enrich --file urls.txt`, skipping URLs
+  that match an existing tool before any LLM spend.
 - **Agent QA seed entry.** Add YAML-based web and mobile regression testing to
   the Coding & development catalog, with software license and provider costs.
 - **Chat funnel analytics.** New typed, centralized analytics module
@@ -32,6 +42,9 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Enrichment create mode can no longer unpublish a live tool.** It used to
+  upsert on slug with `status='draft'` and delete all content blocks; it now
+  refuses existing slugs.
 - **Auth modal on `/chat`.** The chat route (which lives outside `AppShell`) now
   renders `AuthModal`, so the sidebar "Sign in" button and the new
   save-to-bookmarks prompt actually open a dialog — previously they set store

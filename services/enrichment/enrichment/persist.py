@@ -1,9 +1,9 @@
 """PERSIST: write the verified facts + prose to Supabase as a DRAFT.
 
-Mirrors the upsert shape of the existing discover-tools edge function, but the
-tool always lands as status='draft' with an enrichment_jobs row in
-'needs_review'. An admin approves it to 'published' — the service never
-auto-publishes (CLAUDE.md: no unauthenticated/auto mutations to live content).
+Create mode only: a NEW tool lands as status='draft' with an enrichment_jobs
+row in 'needs_review'. An admin approves it to 'published' — the service never
+auto-publishes a new tool. Existing slugs are refused (DuplicateToolError);
+re-enriching a live tool is refresh mode's job (refresh.py).
 """
 
 from __future__ import annotations
@@ -29,6 +29,44 @@ def _domain(url: str) -> str:
         return urlparse(url).hostname.replace("www.", "")  # type: ignore[union-attr]
     except Exception:
         return url
+
+
+class DuplicateToolError(RuntimeError):
+    """Create mode found an existing tool — refusing to overwrite or unpublish it."""
+
+
+def _site_key(url: str) -> tuple[str, str]:
+    """(host without www, path without trailing slash) — for duplicate detection."""
+    try:
+        u = urlparse(url if "://" in url else f"https://{url}")
+        host = (u.hostname or "").lower().removeprefix("www.")
+        return host, u.path.rstrip("/").lower()
+    except Exception:
+        return url.lower(), ""
+
+
+def find_existing_tool(url: str) -> dict | None:
+    """The existing tool (any status) whose website is this URL, if any.
+
+    Conservative: same host counts as a match when the paths are equal or either
+    is the bare domain, so `https://openai.com` matches every openai.com tool but
+    `openai.com/sora` does not match `openai.com/research/whisper`. A skipped
+    duplicate costs nothing; a missed one would clobber a live tool.
+    """
+    host, path = _site_key(url)
+    sb = get_supabase()
+    rows, start = [], 0
+    while True:
+        page = sb.table("tools").select("id,slug,name,website_url,status").range(start, start + 999).execute().data or []
+        rows += page
+        if len(page) < 1000:
+            break
+        start += 1000
+    for r in rows:
+        h, p = _site_key(r.get("website_url") or "")
+        if h == host and (p == path or not p or not path):
+            return r
+    return None
 
 
 def _v(facts: ExtractedFacts, name: str):
@@ -82,12 +120,19 @@ def persist_draft(state: EnrichmentState) -> str:
         "status": "draft",
     }
 
-    upserted = sb.table("tools").upsert(row, on_conflict="slug").execute()
-    tool_id = upserted.data[0]["id"]
+    # Never upsert onto an existing slug: that would flip a published tool to
+    # draft and wipe its content. Existing tools go through refresh mode.
+    clash = sb.table("tools").select("id,status").eq("slug", slug).limit(1).execute().data
+    if clash:
+        raise DuplicateToolError(
+            f"slug '{slug}' already exists ({clash[0]['status']}) — use `enrich --refresh {slug}`"
+        )
 
-    # Replace content blocks (6 dual-audience rows), matching discover-tools order.
+    inserted = sb.table("tools").insert(row).execute()
+    tool_id = inserted.data[0]["id"]
+
+    # Content blocks (6 dual-audience rows), matching discover-tools order.
     c = state["content"]
-    sb.table("content_blocks").delete().eq("tool_id", tool_id).execute()
     sb.table("content_blocks").insert(
         [
             {"tool_id": tool_id, "section": "overview", "audience": "technical", "body_md": c.overview_technical, "sort_order": 0},

@@ -1169,9 +1169,18 @@ ingest → extract → categorize → verify → write → critique ──(retry
   evidence or whose quote isn't found in the sources. The writer only sees
   survivors, so prose can't reintroduce a stripped claim. `critique` re-audits
   the prose against the fact sheet and loops back to `write`.
-- **Output:** always writes `tools.status = 'draft'` + `content_blocks`, with an
-  `enrichment_jobs` row in `needs_review`. **Never auto-publishes** — an admin
-  approves. Trigger: Supabase DB webhook on `enrichment_jobs` insert → Vercel
+- **Output (create mode):** writes a **new** tool as `tools.status = 'draft'` +
+  `content_blocks`, with an `enrichment_jobs` row in `needs_review`. **Never
+  auto-publishes a new tool** — an admin approves. Refuses to write onto an
+  existing slug.
+- **Output (refresh mode, migration `0029`):** re-enriches an already-published
+  tool **in place** and **auto-applies when verified** — not `edited_by_admin`,
+  critic-approved prose, confidence ≥ 0.7, site name still matches. Only
+  evidence-backed, non-null facts are written (never status, `published_at`,
+  slug, name, category, website or logo) and only the six graph-owned content
+  blocks are replaced. Otherwise the job parks in `needs_review` with a
+  `proposal` for an admin. *(Changed 2026-10: previously the pipeline never
+  wrote to published tools.)* Trigger: Supabase DB webhook on `enrichment_jobs` insert → Vercel
   Python function (Fluid Compute, 300s timeout, one tool per invocation).
 - **Cost:** each node logs `llm_usage` under a per-node feature
   (`enrich_extract`/`enrich_categorize`/`enrich_verify`/`enrich_write`/`enrich_critique`,

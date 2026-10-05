@@ -13,7 +13,8 @@ from difflib import SequenceMatcher
 from pydantic import BaseModel, Field
 
 from .llm import call_structured
-from .persist import persist_draft
+from .persist import DuplicateToolError, persist_draft
+from .refresh import persist_refresh
 from .sources import ingest
 from .state import (
     CATEGORY_SLUGS,
@@ -286,7 +287,12 @@ def critique_content_node(state: EnrichmentState) -> EnrichmentState:
 
 
 def persist_node(state: EnrichmentState) -> EnrichmentState:
+    if state.get("mode") == "refresh":
+        return persist_refresh(state)
     if state.get("dry_run"):
         return {"tool_id": None, "status": "needs_review"}
-    tool_id = persist_draft(state)
+    try:
+        tool_id = persist_draft(state)
+    except DuplicateToolError as exc:
+        return {"tool_id": None, "status": "failed", "error": str(exc)}
     return {"tool_id": tool_id, "status": "needs_review"}
