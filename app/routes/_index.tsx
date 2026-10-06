@@ -16,12 +16,16 @@ import { baseMeta, jsonLd, websiteLd, organizationLd } from "@/lib/seo";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { trackEvent, resolveChannel } from "@/lib/analytics";
 
-export function meta(_: Route.MetaArgs) {
+// "552" → "550+": stable, honest marketing copy from the live count.
+function roundedCount(n: number | undefined, fallback = "500+") {
+  return n && n > 0 ? `${Math.floor(n / 50) * 50}+` : fallback;
+}
+
+export function meta({ data }: Route.MetaArgs) {
   return [
     ...baseMeta({
       title: "AI Wiki — Community-curated AI tool directory",
-      description:
-        "Discover, compare, and learn about the best AI tools. Browse 190+ tools by category, compare side-by-side, and ask AI Wiki for recommendations.",
+      description: `Discover, compare, and learn about the best AI tools. Browse ${roundedCount(data?.stats.tool_count)} tools by category, compare side-by-side, and ask AI Wiki for recommendations.`,
       path: "/",
     }),
     jsonLd(websiteLd()),
@@ -112,7 +116,7 @@ async function fetchMarqueeLogos(): Promise<MarqueeLogo[]> {
     .select("slug, name, logo_url")
     .eq("status", "published")
     .not("logo_url", "is", null)
-    .limit(30);
+    .limit(42); // first 30 → marquee, the rest → hero decoration (no repeats)
   return ((data ?? []) as MarqueeLogo[]).filter((t) => !!t.logo_url);
 }
 
@@ -168,7 +172,7 @@ const howItWorks = [
   {
     icon: Search,
     title: "Browse",
-    body: "Explore 190+ tools by category, pricing, and audience. Filter to exactly what fits your workflow.",
+    body: "Explore every tool by category, pricing, and audience. Filter to exactly what fits your workflow.",
   },
   {
     icon: GitCompare,
@@ -217,8 +221,8 @@ function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
 
 function StatStrip({ stats }: { stats: SiteStats | undefined }) {
   const items: { node: React.ReactNode; label: string }[] = [
-    { node: stats ? <CountUp value={stats.tool_count} suffix="+" /> : "190+", label: "Tools indexed" },
-    { node: stats ? <CountUp value={stats.category_count} /> : "14", label: "Categories" },
+    { node: stats ? <CountUp value={stats.tool_count} suffix="+" /> : "500+", label: "Tools indexed" },
+    { node: stats ? <CountUp value={stats.category_count} /> : "27", label: "Categories" },
     { node: "Free", label: "Always free" },
     { node: "Community", label: "Driven" },
   ];
@@ -285,10 +289,11 @@ function LogoMarquee() {
     queryFn: fetchMarqueeLogos,
     staleTime: 10 * 60 * 1000,
   });
-  if (logos.length < 8) return null;
-  const mid = Math.ceil(logos.length / 2);
-  const topRow = logos.slice(0, mid);
-  const bottomRow = logos.slice(mid);
+  const marquee = logos.slice(0, 30);
+  if (marquee.length < 8) return null;
+  const mid = Math.ceil(marquee.length / 2);
+  const topRow = marquee.slice(0, mid);
+  const bottomRow = marquee.slice(mid);
   return (
     <div className="mt-12 space-y-3">
       <p className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-5">
@@ -304,6 +309,112 @@ function LogoMarquee() {
   );
 }
 
+
+// ── Hero motion ───────────────────────────────────────────────────────────────
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Soft spotlight that trails the cursor across the hero. Writes --mx/--my on
+// the section (rAF-throttled); skipped on touch devices and reduced motion.
+function useHeroSpotlight() {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReducedMotion() || !window.matchMedia?.("(pointer: fine)").matches) return;
+    let frame = 0;
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      });
+    };
+    el.addEventListener("pointermove", onMove);
+    return () => {
+      el.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return ref;
+}
+
+// Fade-up for sections as they scroll in. Only elements that start below the
+// viewport are hidden (and only once JS runs), so prerendered HTML, crawlers and
+// above-the-fold content are never blank.
+function useReveal() {
+  useEffect(() => {
+    if (prefersReducedMotion() || !("IntersectionObserver" in window)) return;
+    const els = [...document.querySelectorAll<HTMLElement>("[data-reveal]")].filter(
+      (el) => el.getBoundingClientRect().top > window.innerHeight,
+    );
+    for (const el of els) el.dataset.reveal = "pending";
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          (entry.target as HTMLElement).dataset.reveal = "shown";
+          io.unobserve(entry.target);
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px" },
+    );
+    for (const el of els) io.observe(el);
+    return () => io.disconnect();
+  }, []);
+}
+
+function useHeroLogos() {
+  const { data: logos = [] } = useQuery({
+    queryKey: ["marquee-logos"],
+    queryFn: fetchMarqueeLogos,
+    staleTime: 10 * 60 * 1000,
+  });
+  // Logos 30+ are reserved for the hero; fall back to the start of the list
+  // while the catalog is small.
+  return logos.length >= 42 ? logos.slice(30) : logos;
+}
+
+// Real tool logos orbiting the headline on two tilted rings.
+function HeroOrbit() {
+  const logos = useHeroLogos();
+  if (logos.length < 10) return null;
+  const rings = [
+    { size: "min(1120px, 96vw)", dur: "90s", items: logos.slice(0, 7) },
+    { size: "min(840px, 74vw)", dur: "64s", items: logos.slice(7, 12), reverse: true },
+  ];
+  return (
+    <div className="orbit-layer absolute inset-x-0 top-0 bottom-[24%] hidden md:block [perspective:1400px]" aria-hidden="true">
+      {rings.map((ring) => (
+        <div key={ring.size} className="orbit-plane" style={{ width: ring.size, height: ring.size }}>
+          <div
+            className="orbit-ring"
+            style={{ "--orbit-dur": ring.dur, animationDirection: ring.reverse ? "reverse" : "normal" } as React.CSSProperties}
+          >
+            {ring.items.map((t, i) => {
+              const at = `${(360 / ring.items.length) * i}deg`;
+              return (
+                <div key={t.slug} className="orbit-node" style={{ "--orbit-at": at } as React.CSSProperties}>
+                  <div
+                    className="orbit-logo"
+                    style={{
+                      "--orbit-at": at,
+                      "--orbit-dur": ring.dur,
+                      animationDirection: ring.reverse ? "reverse" : "normal",
+                    } as React.CSSProperties}
+                  >
+                    <img src={t.logo_url} alt="" loading="lazy" decoding="async" className="w-6 h-6 object-contain" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function MatchupSide({ tool, label }: { tool: SpotlightTool | undefined; label: string }) {
   const name = tool?.name ?? label;
@@ -329,9 +440,10 @@ function CompareSpotlight() {
   });
 
   return (
-    <section className="container pb-14">
+    <section className="container pb-14" data-reveal>
       <div className="flex items-center justify-between mb-5">
         <div>
+          <span className="section-eyebrow">Compare</span>
           <h2 className="text-xl font-bold text-text">Compare head-to-head</h2>
           <p className="text-sm text-text-muted mt-0.5">Settle the debate with structured, side-by-side data</p>
         </div>
@@ -372,6 +484,8 @@ export default function Home() {
   const navigate = useNavigate();
   const { featuredTools, stats } = useLoaderData<typeof loader>();
   const { user } = useCurrentUser();
+  const heroRef = useHeroSpotlight();
+  useReveal();
 
   // Activation baseline: landing page became viewable.
   // biome-ignore lint/correctness/useExhaustiveDependencies: fire once per mount
@@ -390,12 +504,14 @@ export default function Home() {
     <div className="flex flex-col">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative isolate pt-14 pb-10 sm:pt-20 sm:pb-14 overflow-hidden">
-        {/* Background: layered galaxy (parallax stars + nebula + shooting stars) + grid mesh */}
+      <section ref={heroRef} className="relative isolate pt-14 pb-10 sm:pt-20 sm:pb-14 overflow-hidden">
+        {/* Cursor spotlight */}
+        <div className="hero-spotlight pointer-events-none absolute inset-0 -z-10 hidden md:block" aria-hidden="true" />
+        {/* Galaxy (parallax stars + nebula + shooting stars) + grid mesh + logo orbit */}
         <div className="hero-bg pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
           {/* Nebula color clouds — soft, off-center, blue/cyan, blended */}
           <div
-            className="galaxy-nebula absolute inset-0 opacity-[0.18]"
+            className="galaxy-nebula absolute inset-0 opacity-[0.3]"
             style={{
               backgroundImage:
                 "radial-gradient(ellipse 50% 44% at 20% 16%, var(--accent), transparent 70%)," +
@@ -408,7 +524,7 @@ export default function Home() {
           />
           {/* Star field — far layer (dense, dim, slow) */}
           <div
-            className="galaxy-stars-far absolute inset-0 opacity-[0.5]"
+            className="galaxy-stars-far absolute inset-0 opacity-[0.7]"
             style={{
               backgroundImage:
                 "radial-gradient(1px 1px at 20px 30px, var(--accent-2), transparent)," +
@@ -431,7 +547,7 @@ export default function Home() {
           />
           {/* Star field — mid layer (medium, medium speed) */}
           <div
-            className="galaxy-stars-mid absolute inset-0 opacity-[0.65]"
+            className="galaxy-stars-mid absolute inset-0 opacity-[0.85]"
             style={{
               backgroundImage:
                 "radial-gradient(1.5px 1.5px at 30px 50px, var(--accent-2), transparent)," +
@@ -451,7 +567,7 @@ export default function Home() {
           />
           {/* Star field — near layer (large, bright, fast, twinkles) */}
           <div
-            className="galaxy-stars-near absolute inset-0 opacity-[0.55]"
+            className="galaxy-stars-near absolute inset-0 opacity-[0.8]"
             style={{
               backgroundImage:
                 "radial-gradient(2px 2px at 50px 70px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
@@ -502,11 +618,12 @@ export default function Home() {
               WebkitMaskImage: "radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 78%)",
             }}
           />
+          <HeroOrbit />
         </div>
 
         <div className="container max-w-3xl mx-auto text-center">
         {/* Logo + badge */}
-        <div className="flex items-center justify-center gap-2 mb-6">
+        <div className="hero-rise flex items-center justify-center gap-2 mb-6" style={{ "--d": "0ms" } as React.CSSProperties}>
           <img src="/logo.png" alt="AI Wiki" className="w-10 h-10 object-contain" />
           <div className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-accent/8 border border-accent/20 text-accent">
             <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
@@ -518,31 +635,38 @@ export default function Home() {
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
-          The AI tool directory
+          <span className="hero-rise inline-block" style={{ "--d": "90ms" } as React.CSSProperties}>
+            The AI tool directory
+          </span>
           <br />
-          <span className="hero-gradient-text">built by the community</span>
+          <span className="hero-rise inline-block" style={{ "--d": "180ms" } as React.CSSProperties}>
+            <span className="hero-gradient-text">built by the community</span>
+          </span>
         </h1>
 
-        <p className="text-base sm:text-lg text-text-muted mb-8 leading-relaxed max-w-xl mx-auto">
-          Real practitioners curating real tools. Browse 190+ AI tools with structured data,
-          honest comparisons, and community ratings — or just ask our AI assistant.
+        <p
+          className="hero-rise text-base sm:text-lg text-text-muted mb-8 leading-relaxed max-w-xl mx-auto"
+          style={{ "--d": "280ms" } as React.CSSProperties}
+        >
+          Real practitioners curating real tools. Browse {roundedCount(stats?.tool_count)} AI tools with structured
+          data, honest comparisons, and community ratings — or just ask our AI assistant.
         </p>
 
         {/* Search */}
-        <div className="relative max-w-lg mx-auto mb-4">
+        <div className="hero-rise relative max-w-lg mx-auto mb-4" style={{ "--d": "380ms" } as React.CSSProperties}>
           {/* Soft accent glow behind the field */}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -inset-x-6 -inset-y-3 -z-10 opacity-60 blur-2xl"
             style={{ background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%)" }}
           />
-          <form onSubmit={handleAsk} className="relative group">
+          <form onSubmit={handleAsk} className="hero-search-ring relative group">
             <Sparkles size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-subtle group-focus-within:text-accent transition-colors pointer-events-none" />
             <input
               name="q"
               type="text"
               placeholder="Ask AI Wiki — e.g. best tool for editing podcasts on a budget…"
-              className="w-full pl-11 pr-28 py-4 rounded-2xl border border-border bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none focus:ring-2 focus:ring-accent/35 focus:border-accent/60 transition-all shadow-[var(--shadow-card)]"
+              className="w-full pl-11 pr-28 py-4 rounded-2xl bg-surface text-text placeholder:text-text-subtle text-sm focus:outline-none transition-all shadow-[var(--shadow-card)]"
             />
             <button
               type="submit"
@@ -554,7 +678,7 @@ export default function Home() {
         </div>
 
         {/* Quick-search chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-7">
+        <div className="hero-rise flex flex-wrap items-center justify-center gap-2 mb-7" style={{ "--d": "480ms" } as React.CSSProperties}>
           <span className="text-xs text-text-subtle">Try:</span>
           {HERO_PROMPTS.map((prompt) => (
             <Link
@@ -568,7 +692,7 @@ export default function Home() {
         </div>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="hero-rise flex flex-col sm:flex-row items-center justify-center gap-3" style={{ "--d": "570ms" } as React.CSSProperties}>
           <Link
             to="/tools"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-accent-fg font-semibold hover:opacity-90 transition-opacity text-sm shadow-[0_0_20px_color-mix(in_srgb,var(--accent)_30%,transparent)]"
@@ -584,7 +708,9 @@ export default function Home() {
         </div>
 
         {/* Stats strip */}
-        <StatStrip stats={stats} />
+        <div className="hero-rise" style={{ "--d": "660ms" } as React.CSSProperties}>
+          <StatStrip stats={stats} />
+        </div>
         </div>
 
         {/* Logo marquee — real indexed tools, seamless infinite scroll */}
@@ -594,9 +720,10 @@ export default function Home() {
       </section>
 
       {/* ── Featured tools ────────────────────────────────────────────────── */}
-      <section className="container pb-14">
+      <section className="container pb-14" data-reveal>
         <div className="flex items-center justify-between mb-5">
           <div>
+            <span className="section-eyebrow">Trending</span>
             <h2 className="text-xl font-bold text-text">Top AI Tools</h2>
             <p className="text-sm text-text-muted mt-0.5">Trending tools from the community</p>
           </div>
@@ -618,10 +745,13 @@ export default function Home() {
       <CompareSpotlight />
 
       {/* ── Category grid ─────────────────────────────────────────────────── */}
-      <section className="container pb-14">
+      <section className="container pb-14" data-reveal>
         <div className="text-center mb-6">
+          <span className="section-eyebrow">Categories</span>
           <h2 className="text-xl font-bold text-text">Browse by Category</h2>
-          <p className="text-sm text-text-muted mt-1">14 categories, every AI use case covered</p>
+          <p className="text-sm text-text-muted mt-1">
+            {stats?.category_count || 27} categories, every AI use case covered — the most popular below
+          </p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {categories.map(({ slug, label, icon: Icon, color }) => (
@@ -642,8 +772,9 @@ export default function Home() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────────────── */}
-      <section className="container pb-20">
+      <section className="container pb-20" data-reveal>
         <div className="text-center mb-6">
+          <span className="section-eyebrow">Get started</span>
           <h2 className="text-xl font-bold text-text">How it works</h2>
           <p className="text-sm text-text-muted mt-1">Everything you need to find your next AI tool</p>
         </div>
@@ -667,7 +798,7 @@ export default function Home() {
       </section>
 
       {/* ── CTA banner ────────────────────────────────────────────────────── */}
-      <section className="container pb-20">
+      <section className="container pb-20" data-reveal>
         <div
           className="rounded-2xl p-8 sm:p-12 text-center relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), color-mix(in srgb, var(--accent-2) 8%, var(--surface)))" }}

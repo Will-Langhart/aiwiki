@@ -7,6 +7,12 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Landing hero refresh.** Real tool logos orbit the headline on two tilted
+  rings over a brighter galaxy backdrop, with a cursor spotlight, a staggered
+  entrance, and a slowly rotating accent ring on the Ask box. Below the fold,
+  sections fade up as they scroll in and carry eyebrow labels. All CSS-only
+  (transform/opacity), off under `prefers-reduced-motion`, decorative layers
+  hidden on phones; prerendered HTML stays fully visible for crawlers.
 - **Enrichment refresh mode.** `uv run enrich --refresh <slug>` /
   `--refresh-batch N` re-enriches published tools in place and auto-applies
   the result when verified (not admin-edited, critic-approved, confidence ≥ 0.7,
@@ -42,6 +48,10 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Stale counts on the landing page.** Hero copy, meta description and the
+  category blurb said "190+ tools" / "14 categories"; they now use the live
+  counts (552 tools / 27 categories). Light theme: the headline gradient's white
+  highlight was hard to read, now mixed toward the text colour.
 - **Enrichment batches can no longer hang on Supabase.** A refresh batch sat
   for 47 minutes on one tool: postgrest-py's default HTTP/2 connection died
   silently and its 120s timeout never fired. The service now talks to Supabase
