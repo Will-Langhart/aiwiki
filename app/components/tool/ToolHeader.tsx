@@ -1,4 +1,4 @@
-import { ExternalLink, GitCompare, GitFork, Zap } from "lucide-react";
+import { BadgeCheck, ExternalLink, GitCompare, GitFork, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ interface ToolHeaderProps {
     model_provider: string | null;
   };
   bookmarkButton?: React.ReactNode;
+  /** A maker verified ownership of this listing (tool_claims, status 'verified'). */
+  verified?: boolean;
 }
 
 const AUDIENCE_LABELS: Record<string, string> = {
@@ -37,7 +39,7 @@ const PRICING_LABELS: Record<string, string> = {
   enterprise: "Enterprise",
 };
 
-export function ToolHeader({ tool, bookmarkButton }: ToolHeaderProps) {
+export function ToolHeader({ tool, bookmarkButton, verified = false }: ToolHeaderProps) {
   const { items, toggle } = useCompareStore();
   const inCompare = items.some((i) => i.id === tool.id);
   const compareDisabled = !inCompare && items.length >= 4;
@@ -68,6 +70,14 @@ export function ToolHeader({ tool, bookmarkButton }: ToolHeaderProps) {
             <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0 mt-1">
               Free tier
             </Badge>
+          )}
+          {verified && (
+            <span
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
+              title="The maker of this tool has verified this listing"
+            >
+              <BadgeCheck size={13} /> Verified by maker
+            </span>
           )}
         </div>
         <p className="text-text-muted mt-1 text-base leading-snug">{tool.tagline}</p>

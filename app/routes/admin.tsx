@@ -27,6 +27,7 @@ export default function AdminLayout() {
     { to: "/admin/discover", label: "Discover tools" },
     { to: "/admin/submissions", label: "Submissions" },
     { to: "/admin/answers", label: "Answer pages" },
+    { to: "/admin/claims", label: "Listing claims" },
     { to: "/admin/flags", label: "Flags" },
   ];
 

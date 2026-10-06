@@ -19,6 +19,7 @@ export default [
     route("search", "routes/search.tsx"),
     route("submit", "routes/submit._index.tsx"),
     route("submit/:draftId", "routes/submit.$draftId.tsx"),
+    route("claim/:slug", "routes/claim.$slug.tsx"),
     // Account (auth-gated)
     layout("routes/account.tsx", [
       route("account", "routes/account._index.tsx"),
@@ -39,6 +40,7 @@ export default [
     route("admin/submissions/:id", "routes/admin.submissions.$id.tsx"),
     route("admin/answers", "routes/admin.answers._index.tsx"),
     route("admin/answers/:id", "routes/admin.answers.$id.tsx"),
+    route("admin/claims", "routes/admin.claims.tsx"),
     route("admin/discover", "routes/admin.discover.tsx"),
     route("admin/flags", "routes/admin.flags.tsx"),
     route("admin/tools/:slug/edit", "routes/admin.tools.$slug.edit.tsx"),
