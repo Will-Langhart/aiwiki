@@ -7,6 +7,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Watch a tool for changes.** Tool pages get a "Get alerts when {tool}
+  changes" card — the sign-up hook for search visitors. Logged out it opens the
+  auth modal and returns to the page with `?watch=1`, which completes the watch;
+  logged in it toggles a bookmark. When an enrichment refresh writes a notable
+  change (pricing tier, free tier, starting price, plans, API, open source,
+  self-hosting), every bookmarker gets a `tool_updated` notification, emailed by
+  the existing trigger unless they opted out. Migration `0030` adds the type.
+- **"Where next" on tool pages.** Alternatives (6 same-category tools), three
+  head-to-head compare links, and a link to the category page — rendered from
+  loader data, so they ship as internal links in the prerendered HTML.
 - **Category pages.** `/categories/:slug` replaces the "coming in Phase 1"
   placeholder for all 27 categories: icon, description and live stats (tools,
   free options, with API, open source), URL-state filters (pricing / API /
@@ -54,6 +64,9 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Bookmark on a tool page sent logged-out visitors to `/submit`.** It now
+  opens the sign-in modal and returns them to the tool. The category breadcrumb
+  (UI and JSON-LD) now links to `/categories/:slug` instead of `/tools`.
 - **Landing page scroll jank.** The hero's three star layers animated
   `background-position`, repainting the whole hero every frame on the main
   thread. They now translate on the compositor (static tile on an overhanging

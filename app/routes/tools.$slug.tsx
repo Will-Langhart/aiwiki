@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Outlet, NavLink, useNavigate, useLoaderData } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, NavLink, useNavigate, useLoaderData, useLocation, useSearchParams } from "react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MetaDescriptor } from "react-router";
 import type { Route } from "./+types/tools.$slug";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -13,6 +13,9 @@ import { BookmarkButton } from "@/components/tool/BookmarkButton";
 import { RatingDisplay } from "@/components/tool/RatingDisplay";
 import { RatingInput } from "@/components/tool/RatingInput";
 import { ReviewsList } from "@/components/tool/ReviewsList";
+import { WatchToolCard } from "@/components/tool/WatchToolCard";
+import { ToolNextSteps, type AlternativeTool } from "@/components/tool/ToolNextSteps";
+import { useAuthModalStore } from "@/stores/auth-modal";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -75,6 +78,11 @@ export interface ToolPublicData {
   tool: FullTool;
   blocks: ContentBlock[];
   categoryName: string | null;
+  categorySlug: string | null;
+  /** Published tools in the tool's category (excluding itself), at most 6. */
+  alternatives: AlternativeTool[];
+  /** Published tools in the category, including this one. */
+  categoryCount: number;
   ratingStats: RatingStats;
 }
 
@@ -107,7 +115,7 @@ async function fetchToolPublicData(
   const [{ data: blocks }, { data: category }, { data: ratingStats }] = await Promise.all([
     client.from("content_blocks").select("*").eq("tool_id", tool.id).order("sort_order"),
     tool.primary_category_id
-      ? client.from("categories").select("name").eq("id", tool.primary_category_id).single()
+      ? client.from("categories").select("name, slug").eq("id", tool.primary_category_id).single()
       : Promise.resolve({ data: null }),
     client
       .from("tool_rating_stats")
@@ -116,10 +124,28 @@ async function fetchToolPublicData(
       .maybeSingle(),
   ]);
 
+  // Same-category tools for the "Alternatives" block, in directory rank order.
+  const cat = category as { name: string; slug: string } | null;
+  let alternatives: AlternativeTool[] = [];
+  let categoryCount = 0;
+  if (cat) {
+    const { data: peers } = await client.rpc("search_tools", {
+      cat_slugs: [cat.slug],
+      page_size: 1000,
+      page_offset: 0,
+    });
+    const list = (peers as AlternativeTool[] | null) ?? [];
+    categoryCount = list.length;
+    alternatives = list.filter((t) => t.slug !== tool.slug).slice(0, 6);
+  }
+
   return {
     tool: tool as FullTool,
     blocks: (blocks as ContentBlock[]) ?? [],
-    categoryName: (category as { name: string } | null)?.name ?? null,
+    categoryName: cat?.name ?? null,
+    categorySlug: cat?.slug ?? null,
+    alternatives,
+    categoryCount,
     ratingStats: {
       avg_stars: (ratingStats as RatingStats | null)?.avg_stars ?? null,
       rating_count: (ratingStats as RatingStats | null)?.rating_count ?? 0,
@@ -223,7 +249,7 @@ export function buildToolMeta(data: ToolPublicData | null | undefined, tab: Tool
       breadcrumbLd([
         { name: "Home", path: "/" },
         { name: "Tools", path: "/tools" },
-        ...(categoryName ? [{ name: categoryName, path: "/tools" }] : []),
+        ...(categoryName && data.categorySlug ? [{ name: categoryName, path: `/categories/${data.categorySlug}` }] : []),
         { name: tool.name, path: `/tools/${tool.slug}` },
       ]),
     ),
@@ -248,6 +274,10 @@ export default function ToolLayout() {
   const data = useLoaderData<typeof loader>();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openAuthModal = useAuthModalStore((s) => s.openModal);
+  const queryClient = useQueryClient();
   const [ratingOpen, setRatingOpen] = useState(false);
 
   const slug = data?.tool.slug;
@@ -259,6 +289,27 @@ export default function ToolLayout() {
     enabled: !!data?.tool.id && !!user?.id,
     staleTime: 60 * 1000,
   });
+
+  // Back from sign-in via "Watch this tool" (?watch=1): finish the watch the
+  // visitor asked for, then drop the param so a refresh doesn't repeat it.
+  const watchHandled = useRef(false);
+  useEffect(() => {
+    if (searchParams.get("watch") !== "1" || !user?.id || !data?.tool.id || !userData) return;
+    if (watchHandled.current) return;
+    watchHandled.current = true;
+    const next = new URLSearchParams(searchParams);
+    next.delete("watch");
+    const done = () => setSearchParams(next, { replace: true, preventScrollReset: true });
+    if (userData.isBookmarked) {
+      done();
+      return;
+    }
+    supabase
+      .from("bookmarks")
+      .insert({ tool_id: data.tool.id, user_id: user.id })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["tool-user", data.tool.id, user.id] }))
+      .then(done, done);
+  }, [searchParams, setSearchParams, user?.id, data?.tool.id, userData, queryClient]);
 
   if (!data) {
     return (
@@ -278,7 +329,10 @@ export default function ToolLayout() {
     );
   }
 
-  const { tool, blocks, categoryName, ratingStats } = data;
+  const { tool, blocks, categoryName, categorySlug, alternatives, categoryCount, ratingStats } = data;
+  // Sign in and come straight back here; ?watch=1 completes a pending watch.
+  const signInHere = (watch = false) =>
+    openAuthModal(`${location.pathname}${watch ? "?watch=1" : ""}`);
   const isBookmarked = userData?.isBookmarked ?? false;
   const userRating = userData?.userRating ?? null;
   const queryKey = ["tool-user", tool.id, user?.id];
@@ -295,7 +349,7 @@ export default function ToolLayout() {
           {categoryName && (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/tools">{categoryName}</BreadcrumbLink>
+                <BreadcrumbLink href={categorySlug ? `/categories/${categorySlug}` : "/tools"}>{categoryName}</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
             </>
@@ -316,13 +370,23 @@ export default function ToolLayout() {
             userId={user?.id}
             isBookmarked={isBookmarked}
             queryKey={queryKey}
-            onAuthRequired={() => navigate("/submit")}
+            onAuthRequired={() => signInHere(true)}
           />
         }
       />
 
       {/* Hero facts */}
       <ToolHero tool={tool} />
+
+      {/* Sign-up hook: alerts on pricing / feature changes (a watch = a bookmark) */}
+      <WatchToolCard
+        toolId={tool.id}
+        toolName={tool.name}
+        userId={user?.id}
+        isWatching={isBookmarked}
+        queryKey={queryKey}
+        onAuthRequired={() => signInHere(true)}
+      />
 
       {/* Rating summary */}
       <RatingDisplay
@@ -373,6 +437,14 @@ export default function ToolLayout() {
 
       {/* Child route renders here with blocks context */}
       <Outlet context={{ blocks }} />
+
+      {/* Where next — alternatives, compares, category (cuts single-page bounces) */}
+      <ToolNextSteps
+        tool={tool}
+        category={categoryName && categorySlug ? { name: categoryName, slug: categorySlug } : null}
+        categoryCount={categoryCount}
+        alternatives={alternatives}
+      />
     </div>
   );
 }
