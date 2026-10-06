@@ -19,7 +19,8 @@
 
 Add --dry-run to --refresh / --refresh-batch to run the graph and print what
 would change without writing anything (LLM calls still cost money).
-Batches stop cleanly when the daily cost cap is reached.
+Batches stop cleanly when the daily cost cap is reached, and any one tool that
+runs past ENRICH_TOOL_DEADLINE_S (600s) is failed so the batch moves on.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from .deadline import ToolDeadlineExceeded, tool_deadline, tool_deadline_s
 from .llm import DailyCapExceeded
 from .runner import apply_job, poll_and_run, run_new, run_refresh, run_url, select_refresh_batch
 
@@ -59,11 +61,12 @@ def _refresh_many(refs: list[str], dry_run: bool) -> None:
     for i, ref in enumerate(refs, 1):
         print(f"[{i}/{len(refs)}] {ref}", file=sys.stderr)
         try:
-            summary = _refresh_summary(ref, run_refresh(ref, dry_run=dry_run), dry_run)
+            with tool_deadline(tool_deadline_s()):
+                summary = _refresh_summary(ref, run_refresh(ref, dry_run=dry_run), dry_run)
         except DailyCapExceeded as exc:
             print(f"Stopping: {exc}", file=sys.stderr)
             break
-        except Exception as exc:  # noqa: BLE001 — keep the batch going, report it
+        except (Exception, ToolDeadlineExceeded) as exc:  # keep the batch going, report it
             summary = {"tool": ref, "status": "failed", "error": str(exc)}
         _print(summary)
         tally[summary["status"]] = tally.get(summary["status"], 0) + 1
@@ -77,11 +80,12 @@ def _create_many(path: str) -> None:
     for i, url in enumerate(urls, 1):
         print(f"[{i}/{len(urls)}] {url}", file=sys.stderr)
         try:
-            final = run_new(url)
+            with tool_deadline(tool_deadline_s()):
+                final = run_new(url)
         except DailyCapExceeded as exc:
             print(f"Stopping: {exc}", file=sys.stderr)
             break
-        except Exception as exc:  # noqa: BLE001
+        except (Exception, ToolDeadlineExceeded) as exc:
             final = {"status": "failed", "error": str(exc)}
         status = final.get("status") or "failed"
         if status == "failed" and ("duplicate" in (final.get("error") or "") or "already exists" in (final.get("error") or "")):

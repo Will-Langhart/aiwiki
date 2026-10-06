@@ -139,6 +139,12 @@ Anthropic's default is no timeout, which let a stalled connection hang a run
 indefinitely; 90s x 3 attempts keeps a single node inside the 300s function
 budget. A hang now fails that tool (`AnthropicTimeoutError`, recorded on its job) and the batch moves on.
 
+Two more guards cover hangs outside the LLM call. The Supabase client uses
+HTTP/1.1 with a 30s read timeout (postgrest-py's default HTTP/2 client once
+blocked a request for 47 minutes despite its 120s timeout), and CLI batches give
+each tool at most `ENRICH_TOOL_DEADLINE_S` (default 600s; a normal run is ~60s)
+before failing it and moving on — see [`deadline.py`](enrichment/deadline.py).
+
 ## Rollout
 
 1. Ship the migration; run this in **shadow mode** — enrich into drafts and diff

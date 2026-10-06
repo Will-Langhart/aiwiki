@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from .deadline import ToolDeadlineExceeded
 from .graph import build_graph
 from .persist import find_existing_tool
 from .refresh import apply_proposal
@@ -111,7 +112,7 @@ def run_refresh(ref: str, dry_run: bool = False, job_id: str | None = None) -> E
         initial["job_id"] = job_id
     try:
         final = _graph().invoke(initial, {"recursion_limit": 25})
-    except Exception as exc:  # noqa: BLE001 — record any failure on the job row
+    except (Exception, ToolDeadlineExceeded) as exc:  # record any failure on the job row
         if job_id and not dry_run:
             _finish(sb, job_id, "failed", error=str(exc))
         raise
@@ -220,7 +221,7 @@ def run_job(job_id: str, url: str) -> EnrichmentState:
             flags=final.get("flags"),
         )
         return final
-    except Exception as exc:  # noqa: BLE001 — record any failure on the job row
+    except (Exception, ToolDeadlineExceeded) as exc:  # record any failure on the job row
         _finish(sb, job_id, "failed", error=str(exc))
         raise
 

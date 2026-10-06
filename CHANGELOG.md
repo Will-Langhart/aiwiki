@@ -42,6 +42,11 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Enrichment batches can no longer hang on Supabase.** A refresh batch sat
+  for 47 minutes on one tool: postgrest-py's default HTTP/2 connection died
+  silently and its 120s timeout never fired. The service now talks to Supabase
+  over HTTP/1.1 with a 30s read timeout, and CLI batches fail any tool that runs
+  past `ENRICH_TOOL_DEADLINE_S` (600s) and move on.
 - **Browse page dropped tools past 500.** `/tools` requested `page_size: 500`,
   so once the catalog reached 552 published tools the unfiltered grid silently
   lost the last 52 (T–Z, e.g. tldraw, Tome, Zed, Warp). Raised to 1000 (the
