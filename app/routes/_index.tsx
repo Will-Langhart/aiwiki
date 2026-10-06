@@ -781,7 +781,7 @@ export default function Home() {
           {categories.map(({ slug, label, icon: Icon, color }) => (
             <Link
               key={slug}
-              to={`/tools?cat=${slug}`}
+              to={`/categories/${slug}`}
               className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-surface hover:bg-surface-2 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] hover:border-accent/20 transition-all duration-200 text-center"
             >
               <div className="w-9 h-9 rounded-lg bg-surface-2 group-hover:bg-bg flex items-center justify-center flex-shrink-0 transition-colors">

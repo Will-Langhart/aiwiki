@@ -7,6 +7,12 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Category pages.** `/categories/:slug` replaces the "coming in Phase 1"
+  placeholder for all 27 categories: icon, description and live stats (tools,
+  free options, with API, open source), URL-state filters (pricing / API /
+  open source) and sort, the tool grid, and links to every other category.
+  Prerendered per category with Breadcrumb + ItemList JSON-LD and indexable
+  meta; landing-page category tiles now link here.
 - **Landing hero refresh.** Real tool logos orbit the headline on two tilted
   rings over a brighter galaxy backdrop, with a cursor spotlight, a staggered
   entrance, and a slowly rotating accent ring on the Ask box. Below the fold,
