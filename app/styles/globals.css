@@ -122,9 +122,15 @@
    Three star layers drift at different speeds (parallax) and seamlessly loop one
    tile-width; the near layer twinkles; nebula floats + breathes; shooting stars
    streak occasionally. */
-@keyframes galaxy-drift-far  { to { background-position: 320px 320px; } }
-@keyframes galaxy-drift-mid  { to { background-position: -380px 380px; } }
-@keyframes galaxy-drift-near { to { background-position: 460px 460px; } }
+/* Each star layer is a static tile pattern on an element that overhangs the
+   hero by one tile; translating it exactly one tile loops seamlessly. This is
+   transform-only, so it runs on the compositor. (Animating background-position
+   repainted three full-hero layers every frame — the main source of scroll
+   jank on the landing page.) The edge fade lives on a static wrapper so it
+   doesn't travel with the stars. */
+@keyframes galaxy-drift-far  { to { transform: translate3d(320px, 320px, 0); } }
+@keyframes galaxy-drift-mid  { to { transform: translate3d(-380px, 380px, 0); } }
+@keyframes galaxy-drift-near { to { transform: translate3d(460px, 460px, 0); } }
 
 @keyframes galaxy-twinkle {
   0%, 100% { opacity: 0.30; }
@@ -145,12 +151,16 @@
   100% { transform: translate3d(var(--shoot-dx, 460px), var(--shoot-dy, 167px), 0) rotate(20deg); opacity: 0; }
 }
 
+.galaxy-stars-far,
+.galaxy-stars-mid,
+.galaxy-stars-near { will-change: transform; backface-visibility: hidden; }
 .galaxy-stars-far { animation: galaxy-drift-far 220s linear infinite; }
 .galaxy-stars-mid { animation: galaxy-drift-mid 140s linear infinite; }
 .galaxy-stars-near {
   animation:
     galaxy-drift-near 90s linear infinite,
     galaxy-twinkle 4.5s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 .galaxy-nebula {
   animation: galaxy-nebula-float 24s ease-in-out infinite;
@@ -329,6 +339,11 @@
   animation: orbit-counter var(--orbit-dur, 60s) linear infinite;
   transform-style: preserve-3d;
 }
+
+/* Hero scrolled out of view → freeze its animations (useHeroSpotlight). */
+[data-offscreen] *,
+[data-offscreen] *::before,
+[data-offscreen] *::after { animation-play-state: paused !important; }
 
 /* Cursor spotlight — JS writes --mx / --my on the hero. */
 .hero-spotlight {

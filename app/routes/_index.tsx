@@ -317,8 +317,20 @@ function prefersReducedMotion() {
 
 // Soft spotlight that trails the cursor across the hero. Writes --mx/--my on
 // the section (rAF-throttled); skipped on touch devices and reduced motion.
+// Also pauses every hero animation while the hero is scrolled out of view, so
+// the stars, orbit and marquee cost nothing while reading the rest of the page.
 function useHeroSpotlight() {
   const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) delete el.dataset.offscreen;
+      else el.dataset.offscreen = "";
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   useEffect(() => {
     const el = ref.current;
     if (!el || prefersReducedMotion() || !window.matchMedia?.("(pointer: fine)").matches) return;
@@ -524,64 +536,76 @@ export default function Home() {
           />
           {/* Star field — far layer (dense, dim, slow) */}
           <div
-            className="galaxy-stars-far absolute inset-0 opacity-[0.7]"
-            style={{
-              backgroundImage:
-                "radial-gradient(1px 1px at 20px 30px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 80px 140px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 150px 60px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 210px 200px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 60px 250px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 280px 90px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 120px 300px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 300px 180px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 40px 110px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 190px 40px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 250px 270px, var(--accent-2), transparent)," +
-                "radial-gradient(1px 1px at 100px 190px, var(--accent-2), transparent)",
-              backgroundSize: "320px 320px",
-              backgroundRepeat: "repeat",
-              maskImage: "radial-gradient(ellipse 85% 80% at 50% 0%, #000 15%, transparent 82%)",
-              WebkitMaskImage: "radial-gradient(ellipse 85% 80% at 50% 0%, #000 15%, transparent 82%)",
-            }}
-          />
+            className="absolute inset-0 opacity-[0.7]"
+            style={{ maskImage: "radial-gradient(ellipse 85% 80% at 50% 0%, #000 15%, transparent 82%)", WebkitMaskImage: "radial-gradient(ellipse 85% 80% at 50% 0%, #000 15%, transparent 82%)" }}
+          >
+            <div
+              className="galaxy-stars-far absolute"
+              style={{
+                inset: "-320px",
+                backgroundImage:
+                  "radial-gradient(1px 1px at 20px 30px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 80px 140px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 150px 60px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 210px 200px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 60px 250px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 280px 90px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 120px 300px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 300px 180px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 40px 110px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 190px 40px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 250px 270px, var(--accent-2), transparent)," +
+                  "radial-gradient(1px 1px at 100px 190px, var(--accent-2), transparent)",
+                backgroundSize: "320px 320px",
+                backgroundRepeat: "repeat",
+              }}
+            />
+          </div>
           {/* Star field — mid layer (medium, medium speed) */}
           <div
-            className="galaxy-stars-mid absolute inset-0 opacity-[0.85]"
-            style={{
-              backgroundImage:
-                "radial-gradient(1.5px 1.5px at 30px 50px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 160px 90px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 90px 210px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 260px 150px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 340px 260px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 200px 330px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 60px 310px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 300px 50px, var(--accent-2), transparent)," +
-                "radial-gradient(1.5px 1.5px at 140px 260px, var(--accent-2), transparent)",
-              backgroundSize: "380px 380px",
-              backgroundRepeat: "repeat",
-              maskImage: "radial-gradient(ellipse 82% 78% at 50% 0%, #000 12%, transparent 80%)",
-              WebkitMaskImage: "radial-gradient(ellipse 82% 78% at 50% 0%, #000 12%, transparent 80%)",
-            }}
-          />
+            className="absolute inset-0 opacity-[0.85]"
+            style={{ maskImage: "radial-gradient(ellipse 82% 78% at 50% 0%, #000 12%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse 82% 78% at 50% 0%, #000 12%, transparent 80%)" }}
+          >
+            <div
+              className="galaxy-stars-mid absolute"
+              style={{
+                inset: "-380px",
+                backgroundImage:
+                  "radial-gradient(1.5px 1.5px at 30px 50px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 160px 90px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 90px 210px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 260px 150px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 340px 260px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 200px 330px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 60px 310px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 300px 50px, var(--accent-2), transparent)," +
+                  "radial-gradient(1.5px 1.5px at 140px 260px, var(--accent-2), transparent)",
+                backgroundSize: "380px 380px",
+                backgroundRepeat: "repeat",
+              }}
+            />
+          </div>
           {/* Star field — near layer (large, bright, fast, twinkles) */}
           <div
-            className="galaxy-stars-near absolute inset-0 opacity-[0.8]"
-            style={{
-              backgroundImage:
-                "radial-gradient(2px 2px at 50px 70px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
-                "radial-gradient(2px 2px at 230px 130px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
-                "radial-gradient(2px 2px at 390px 90px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
-                "radial-gradient(2px 2px at 170px 310px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
-                "radial-gradient(2px 2px at 340px 370px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
-                "radial-gradient(2px 2px at 90px 410px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)",
-              backgroundSize: "460px 460px",
-              backgroundRepeat: "repeat",
-              maskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 10%, transparent 78%)",
-              WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 10%, transparent 78%)",
-            }}
-          />
+            className="absolute inset-0 opacity-[0.8]"
+            style={{ maskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 10%, transparent 78%)", WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 0%, #000 10%, transparent 78%)" }}
+          >
+            <div
+              className="galaxy-stars-near absolute"
+              style={{
+                inset: "-460px",
+                backgroundImage:
+                  "radial-gradient(2px 2px at 50px 70px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
+                  "radial-gradient(2px 2px at 230px 130px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
+                  "radial-gradient(2px 2px at 390px 90px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
+                  "radial-gradient(2px 2px at 170px 310px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
+                  "radial-gradient(2px 2px at 340px 370px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)," +
+                  "radial-gradient(2px 2px at 90px 410px, color-mix(in srgb, var(--accent-2) 65%, #fff), transparent)",
+                backgroundSize: "460px 460px",
+                backgroundRepeat: "repeat",
+              }}
+            />
+          </div>
           {/* Shooting stars — occasional streaks */}
           <div
             className="galaxy-shoot absolute h-[2px] w-[150px] rounded-full"
