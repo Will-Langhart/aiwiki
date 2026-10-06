@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ArrowRight, GitCompare } from "lucide-react";
+import { ArrowRight, BadgeCheck, GitCompare } from "lucide-react";
 import { ToolCard } from "@/components/tool/ToolCard";
 
 export interface AlternativeTool {
@@ -30,6 +30,8 @@ interface ToolNextStepsProps {
   category: { slug: string; name: string } | null;
   categoryCount: number;
   alternatives: AlternativeTool[];
+  /** Hide the maker CTA once a maker has verified the listing. */
+  isClaimed?: boolean;
 }
 
 /**
@@ -38,7 +40,7 @@ interface ToolNextStepsProps {
  * compares and the category page give them a next click. Rendered from loader
  * data, so it's in the prerendered HTML as internal links too.
  */
-export function ToolNextSteps({ tool, category, categoryCount, alternatives }: ToolNextStepsProps) {
+export function ToolNextSteps({ tool, category, categoryCount, alternatives, isClaimed = false }: ToolNextStepsProps) {
   if (alternatives.length === 0 && !category) return null;
   const compares = alternatives.slice(0, 3);
 
@@ -100,6 +102,15 @@ export function ToolNextSteps({ tool, category, categoryCount, alternatives }: T
             className="text-text-subtle group-hover:text-accent transition-colors"
           />
         </Link>
+      )}
+      {!isClaimed && (
+        <p className="flex items-center gap-1.5 text-xs text-text-subtle">
+          <BadgeCheck size={13} className="text-accent" />
+          Is {tool.name} yours?{" "}
+          <Link to={`/claim/${tool.slug}`} className="text-accent hover:underline">
+            Claim the listing &amp; get the badge
+          </Link>
+        </p>
       )}
     </section>
   );

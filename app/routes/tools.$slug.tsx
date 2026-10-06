@@ -83,6 +83,8 @@ export interface ToolPublicData {
   alternatives: AlternativeTool[];
   /** Published tools in the category, including this one. */
   categoryCount: number;
+  /** A maker has a verified claim on this listing. */
+  isClaimed: boolean;
   ratingStats: RatingStats;
 }
 
@@ -112,7 +114,7 @@ async function fetchToolPublicData(
 
   if (error || !tool) return null;
 
-  const [{ data: blocks }, { data: category }, { data: ratingStats }] = await Promise.all([
+  const [{ data: blocks }, { data: category }, { data: ratingStats }, { count: verifiedClaims }] = await Promise.all([
     client.from("content_blocks").select("*").eq("tool_id", tool.id).order("sort_order"),
     tool.primary_category_id
       ? client.from("categories").select("name, slug").eq("id", tool.primary_category_id).single()
@@ -122,6 +124,11 @@ async function fetchToolPublicData(
       .select("avg_stars, rating_count")
       .eq("tool_id", tool.id)
       .maybeSingle(),
+    client
+      .from("tool_claims")
+      .select("id", { count: "exact", head: true })
+      .eq("tool_id", tool.id)
+      .eq("status", "verified"),
   ]);
 
   // Same-category tools for the "Alternatives" block, in directory rank order.
@@ -146,6 +153,7 @@ async function fetchToolPublicData(
     categorySlug: cat?.slug ?? null,
     alternatives,
     categoryCount,
+    isClaimed: (verifiedClaims ?? 0) > 0,
     ratingStats: {
       avg_stars: (ratingStats as RatingStats | null)?.avg_stars ?? null,
       rating_count: (ratingStats as RatingStats | null)?.rating_count ?? 0,
@@ -329,7 +337,7 @@ export default function ToolLayout() {
     );
   }
 
-  const { tool, blocks, categoryName, categorySlug, alternatives, categoryCount, ratingStats } = data;
+  const { tool, blocks, categoryName, categorySlug, alternatives, categoryCount, isClaimed, ratingStats } = data;
   // Sign in and come straight back here; ?watch=1 completes a pending watch.
   const signInHere = (watch = false) =>
     openAuthModal(`${location.pathname}${watch ? "?watch=1" : ""}`);
@@ -363,6 +371,7 @@ export default function ToolLayout() {
       {/* Tool header */}
       <ToolHeader
         tool={tool}
+        verified={isClaimed}
         bookmarkButton={
           <BookmarkButton
             toolId={tool.id}
@@ -444,6 +453,7 @@ export default function ToolLayout() {
         category={categoryName && categorySlug ? { name: categoryName, slug: categorySlug } : null}
         categoryCount={categoryCount}
         alternatives={alternatives}
+        isClaimed={isClaimed}
       />
     </div>
   );

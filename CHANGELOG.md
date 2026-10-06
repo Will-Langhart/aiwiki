@@ -7,6 +7,14 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **"Featured on AI Wiki" badge + claim your listing.** `/claim/:slug` gives
+  any listed tool an embeddable badge (dark/light SVG at `/badges/`, HTML and
+  Markdown snippets linking back with `?ref=badge`), and lets a signed-in maker
+  claim the listing via `claim_tool()`: an email on the tool's website domain
+  verifies instantly, anything else goes to `/admin/claims` for review.
+  Verified listings show a "Verified by maker" mark; unclaimed tool pages link
+  to the claim page. Migration `0031` adds `tool_claims` (RLS: verified claims
+  public, own claims private, admins all; inserts only through the function).
 - **Watch a tool for changes.** Tool pages get a "Get alerts when {tool}
   changes" card — the sign-up hook for search visitors. Logged out it opens the
   auth modal and returns to the page with `?watch=1`, which completes the watch;
