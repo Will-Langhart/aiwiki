@@ -252,7 +252,60 @@ def apply_proposal(tool_id: str, proposal: dict) -> list[str]:
                 .execute()
             )
         applied.append("content_blocks")
+    notify_watchers(tool_id, proposal.get("fields", {}))
     return applied
+
+
+# Changes worth an alert to people watching (bookmarking) a tool. Prose,
+# integrations and strengths churn on most refreshes and would be noise.
+NOTABLE_FIELDS = {
+    "pricing_tier": "Pricing",
+    "has_free_tier": "Free tier",
+    "pricing_starts_at": "Starting price",
+    "pricing_detail": "Plans",
+    "api_available": "API",
+    "open_source": "Open source",
+    "self_hostable": "Self-hosting",
+}
+
+
+def _describe(col: str, change: dict) -> str:
+    label, old, new = NOTABLE_FIELDS[col], change.get("old"), change.get("new")
+    if isinstance(new, bool):
+        return f"{label}: {'now available' if new else 'no longer offered'}"
+    if col == "pricing_starts_at":
+        return f"{label}: {'$' + format(old, 'g') if old is not None else 'unlisted'} → ${new:g}"
+    if col == "pricing_detail":
+        return f"{label} updated"
+    return f"{label}: {old or 'unlisted'} → {new}"
+
+
+def notify_watchers(tool_id: str, fields: dict) -> int:
+    """One 'tool_updated' notification per bookmarker when a notable field changed.
+
+    The on_notification_created trigger emails each one (unless they opted out
+    in notification_preferences). Returns how many notifications were created.
+    """
+    notable = [col for col in NOTABLE_FIELDS if col in fields]
+    if not notable:
+        return 0
+    sb = get_supabase()
+    watchers = sb.table("bookmarks").select("user_id").eq("tool_id", tool_id).execute().data or []
+    if not watchers:
+        return 0
+    tool = sb.table("tools").select("name,slug").eq("id", tool_id).single().execute().data or {}
+    summary = "; ".join(_describe(col, fields[col]) for col in notable)
+    payload = {
+        "title": f"{tool.get('name', 'A tool you watch')} was updated",
+        "body": summary,
+        "toolName": tool.get("name"),
+        "toolSlug": tool.get("slug"),
+        "link": f"/tools/{tool.get('slug')}",
+        "fields": notable,
+    }
+    rows = [{"user_id": w["user_id"], "type": "tool_updated", "payload": payload} for w in watchers]
+    sb.table("notifications").insert(rows).execute()
+    return len(rows)
 
 
 def persist_refresh(state: EnrichmentState) -> EnrichmentState:
