@@ -48,6 +48,12 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Fixed
 
+- **Landing page scroll jank.** The hero's three star layers animated
+  `background-position`, repainting the whole hero every frame on the main
+  thread. They now translate on the compositor (static tile on an overhanging
+  layer, edge fade on a static wrapper), and all hero animations pause while
+  the hero is scrolled out of view. Scroll jank at 4× CPU throttle: 36 → 5
+  dropped frames, 31.6 → 19.1 ms average frame.
 - **Stale counts on the landing page.** Hero copy, meta description and the
   category blurb said "190+ tools" / "14 categories"; they now use the live
   counts (552 tools / 27 categories). Light theme: the headline gradient's white
