@@ -35,7 +35,7 @@ export default {
     const categoryPaths = (categories ?? []).map((c) => `/categories/${c.slug}`);
 
     return [
-      "/", "/tools", "/suggest", "/answers",
+      "/", "/tools", "/suggest", "/answers", "/changes",
       ...toolPaths, ...categoryPaths, ...comparePaths, ...answerPaths,
     ];
   },

@@ -42,6 +42,7 @@ const STATIC_ROUTES: UrlEntry[] = [
   { loc: "/tools", changefreq: "daily", priority: 0.9, lastmod: BUILD_DATE },
   { loc: "/compare", changefreq: "weekly", priority: 0.6, lastmod: BUILD_DATE },
   { loc: "/answers", changefreq: "weekly", priority: 0.7, lastmod: BUILD_DATE },
+  { loc: "/changes", changefreq: "weekly", priority: 0.6, lastmod: BUILD_DATE },
   { loc: "/suggest", changefreq: "monthly", priority: 0.4, lastmod: BUILD_DATE },
 ];
 

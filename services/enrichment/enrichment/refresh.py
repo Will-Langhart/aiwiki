@@ -217,18 +217,24 @@ def build_proposal(state: EnrichmentState) -> dict:
     }
 
 
-def apply_proposal(tool_id: str, proposal: dict) -> list[str]:
+def apply_proposal(tool_id: str, proposal: dict, job_id: str | None = None) -> list[str]:
     """Write a proposal to the live tool. Returns the columns written.
 
     Content is replaced insert-then-delete, so a failure part-way leaves the old
     blocks (plus possibly the new ones) rather than a tool with no content.
+    Each written field is recorded in tool_changes (migration 0035).
     """
     sb = get_supabase()
-    update = {col: change["new"] for col, change in proposal.get("fields", {}).items()}
+    fields = proposal.get("fields", {})
+    update = {col: change["new"] for col, change in fields.items()}
     applied = sorted(update)
-    # Always bump updated_at so batch selection ("oldest first") moves on.
-    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc).isoformat()
+    # Always bump updated_at so batch selection ("oldest first") moves on, and
+    # stamp last_verified_at — every applied proposal passed the evidence gate.
+    update["updated_at"] = now
+    update["last_verified_at"] = now
     sb.table("tools").update(update).eq("id", tool_id).execute()
+    record_changes(tool_id, fields, job_id)
 
     c = proposal.get("content")
     if c:
@@ -254,6 +260,29 @@ def apply_proposal(tool_id: str, proposal: dict) -> list[str]:
         applied.append("content_blocks")
     notify_watchers(tool_id, proposal.get("fields", {}))
     return applied
+
+
+def record_changes(tool_id: str, fields: dict, job_id: str | None = None) -> int:
+    """Append one tool_changes row per written field. Returns rows written.
+
+    The table's is_notable column decides which rows are public; this records
+    everything so admins can audit what a refresh did.
+    """
+    if not fields:
+        return 0
+    rows = [
+        {
+            "tool_id": tool_id,
+            "job_id": job_id,
+            "field": col,
+            "old_value": change.get("old"),
+            "new_value": change.get("new"),
+            "evidence": change.get("evidence"),
+        }
+        for col, change in fields.items()
+    ]
+    get_supabase().table("tool_changes").insert(rows).execute()
+    return len(rows)
 
 
 # Changes worth an alert to people watching (bookmarking) a tool. Prose,
@@ -320,5 +349,5 @@ def persist_refresh(state: EnrichmentState) -> EnrichmentState:
         }
     if not verified:
         return {"proposal": proposal, "applied_fields": [], "status": "needs_review"}
-    applied = apply_proposal(state["tool_id"], proposal)
+    applied = apply_proposal(state["tool_id"], proposal, job_id=state.get("job_id"))
     return {"proposal": proposal, "applied_fields": applied, "status": "applied"}

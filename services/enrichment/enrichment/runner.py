@@ -53,18 +53,24 @@ def run_url(url: str, job_id: str | None = None, dry_run: bool = False) -> Enric
 
 
 def _require_refresh_schema(sb) -> None:
-    """Fail clearly if migration 0029 isn't applied.
+    """Fail clearly if migrations 0029 / 0035 aren't applied.
 
     Without the column, PostgREST resolves `mode` to Postgres's mode() aggregate
-    and returns the baffling "WITHIN GROUP is required" error instead.
+    and returns the baffling "WITHIN GROUP is required" error instead. Without
+    0035, a verified refresh would fail only at apply time, after the LLM spend.
     """
-    try:
-        sb.table("enrichment_jobs").select("mode,proposal,applied_fields").limit(1).execute()
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(
-            "Refresh mode needs migration 0029_enrichment_refresh_mode.sql — "
-            f"apply it to this database first ({exc})"
-        ) from None
+    checks = [
+        ("0029_enrichment_refresh_mode.sql", "enrichment_jobs", "mode,proposal,applied_fields"),
+        ("0035_tool_freshness.sql", "tools", "last_verified_at"),
+        ("0035_tool_freshness.sql", "tool_changes", "id"),
+    ]
+    for migration, table, cols in checks:
+        try:
+            sb.table(table).select(cols).limit(1).execute()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                f"Refresh mode needs migration {migration} — apply it to this database first ({exc})"
+            ) from None
 
 
 def _load_tool(ref: str) -> dict:
@@ -166,7 +172,7 @@ def apply_job(job_id: str) -> list[str]:
     job = sb.table("enrichment_jobs").select("*").eq("id", job_id).single().execute().data
     if not job or job.get("mode") != "refresh" or job.get("status") != "needs_review" or not job.get("proposal"):
         raise ValueError(f"job {job_id} is not a refresh proposal awaiting review")
-    applied = apply_proposal(job["tool_id"], job["proposal"])
+    applied = apply_proposal(job["tool_id"], job["proposal"], job_id=job_id)
     _finish(sb, job_id, "applied", applied_fields=applied)
     return applied
 

@@ -101,6 +101,18 @@ one-off backfill). Refreshes don't trigger a Vercel rebuild (only a
 →`published` status change does), so **deploy once after a batch** for the
 prerendered pages to pick up the new content.
 
+**Change log + last verified** (migration `0035`). Every applied proposal
+stamps `tools.last_verified_at` and writes one `tool_changes` row per field
+(old, new, evidence, job id). Notable rows (pricing, free tier, API, open
+source, self-hosting, models — with a prior value) are public: they show on the
+tool page and on `/changes`.
+
+**Scheduled.** `.github/workflows/freshness.yml` runs `--refresh-batch 50`
+every Monday, posts a summary + catalog-health report
+(`scripts/freshness-report.ts`) to the job summary, and triggers the Vercel
+deploy hook when anything was applied. Run it on demand from the Actions tab
+(batch size + dry-run inputs).
+
 **New tools from a list.** `uv run enrich --file urls.txt` runs create mode per
 URL. A URL matching an existing tool's website is skipped before any LLM spend,
 and create mode refuses to write onto an existing slug — it can no longer

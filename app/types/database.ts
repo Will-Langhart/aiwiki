@@ -848,6 +848,55 @@ export type Database = {
           },
         ]
       }
+      tool_changes: {
+        Row: {
+          created_at: string
+          evidence: string | null
+          field: string
+          id: string
+          is_notable: boolean | null
+          job_id: string | null
+          new_value: Json | null
+          old_value: Json | null
+          tool_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: string | null
+          field: string
+          id?: string
+          job_id?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tool_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: string | null
+          field?: string
+          id?: string
+          job_id?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tool_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_changes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "enrichment_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_changes_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tool_claims: {
         Row: {
           claimant_email: string
@@ -1128,6 +1177,7 @@ export type Database = {
           integrations: string[]
           is_featured: boolean
           key_strengths: string[] | null
+          last_verified_at: string | null
           logo_url: string | null
           model_provider: string | null
           name: string
@@ -1167,6 +1217,7 @@ export type Database = {
           integrations?: string[]
           is_featured?: boolean
           key_strengths?: string[] | null
+          last_verified_at?: string | null
           logo_url?: string | null
           model_provider?: string | null
           name: string
@@ -1206,6 +1257,7 @@ export type Database = {
           integrations?: string[]
           is_featured?: boolean
           key_strengths?: string[] | null
+          last_verified_at?: string | null
           logo_url?: string | null
           model_provider?: string | null
           name?: string

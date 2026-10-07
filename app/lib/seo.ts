@@ -182,6 +182,8 @@ interface ToolLdInput {
   operating_system?: string;
   avg_stars?: number | null;
   rating_count?: number;
+  /** ISO timestamp the listing's facts were last verified or edited. */
+  date_modified?: string | null;
 }
 
 /**
@@ -203,6 +205,7 @@ export function softwareApplicationLd(tool: ToolLdInput): Record<string, unknown
   };
 
   if (tool.logo_url) data.image = tool.logo_url;
+  if (tool.date_modified) data.dateModified = tool.date_modified;
 
   // Offers — free tier or starting price.
   if (tool.has_free_tier || tool.pricing_tier === "free") {
