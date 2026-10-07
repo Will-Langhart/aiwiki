@@ -192,12 +192,20 @@ const howItWorks = [
 ];
 
 // ── Components ────────────────────────────────────────────────────────────────
+// Set after the first hydrated render. Before that, counters render the real
+// value so the prerendered HTML (what crawlers and no-JS visitors see) never
+// says "0 tools"; only later client-side mounts animate from 0.
+let hasHydrated = false;
+
 // Eased count-up from 0 → target. Re-runs when target changes (e.g. when async
 // stats arrive). Respects prefers-reduced-motion by snapping to the value.
 function useCountUp(target: number, duration = 1300) {
-  const [val, setVal] = useState(0);
+  const skipFirstRef = useRef(!hasHydrated);
+  const [val, setVal] = useState(() => (hasHydrated ? 0 : target));
   const rafRef = useRef(0);
   useEffect(() => {
+    hasHydrated = true;
+    if (skipFirstRef.current) { skipFirstRef.current = false; setVal(target); return; }
     if (target <= 0) { setVal(0); return; }
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduce) { setVal(target); return; }
