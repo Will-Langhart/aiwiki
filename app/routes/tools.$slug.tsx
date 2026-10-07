@@ -15,6 +15,7 @@ import { RatingInput } from "@/components/tool/RatingInput";
 import { ReviewsList } from "@/components/tool/ReviewsList";
 import { WatchToolCard } from "@/components/tool/WatchToolCard";
 import { ToolNextSteps, type AlternativeTool } from "@/components/tool/ToolNextSteps";
+import { fetchToolAlternatives } from "@/lib/alternatives";
 import { useAuthModalStore } from "@/stores/auth-modal";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
@@ -131,9 +132,10 @@ async function fetchToolPublicData(
       .eq("status", "verified"),
   ]);
 
-  // Same-category tools for the "Alternatives" block, in directory rank order.
+  // "Alternatives" block: ranked by tool_alternatives (similarity + category).
+  // Falls back to same-category directory order if that RPC isn't deployed.
   const cat = category as { name: string; slug: string } | null;
-  let alternatives: AlternativeTool[] = [];
+  let alternatives: AlternativeTool[] = (await fetchToolAlternatives(client, tool.slug, 6)) ?? [];
   let categoryCount = 0;
   if (cat) {
     const { data: peers } = await client.rpc("search_tools", {
@@ -143,7 +145,7 @@ async function fetchToolPublicData(
     });
     const list = (peers as AlternativeTool[] | null) ?? [];
     categoryCount = list.length;
-    alternatives = list.filter((t) => t.slug !== tool.slug).slice(0, 6);
+    if (alternatives.length === 0) alternatives = list.filter((t) => t.slug !== tool.slug).slice(0, 6);
   }
 
   return {

@@ -29,6 +29,7 @@ export default {
       `/tools/${t.slug}`,
       `/tools/${t.slug}/docs`,
       `/tools/${t.slug}/use-cases`,
+      `/tools/${t.slug}/alternatives`,
     ]);
 
     const categoryPaths = (categories ?? []).map((c) => `/categories/${c.slug}`);

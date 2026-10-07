@@ -647,6 +647,7 @@ Every route is enumerated below with its rendering strategy and purpose. Prerend
 | `/tools/:slug` | Prerender per slug | ToolLayout (comfortable) | Tool overview (canonical) |
 | `/tools/:slug/docs` | Prerender per slug | ToolLayout (comfortable) | Tool reference docs |
 | `/tools/:slug/use-cases` | Prerender per slug | ToolLayout (comfortable) | Use cases & examples |
+| `/tools/:slug/alternatives` | Prerender per slug | RootLayout (comfortable) | Ranked alternatives (`tool_alternatives` RPC), at-a-glance table, links to prerendered `/compare/a-vs-b` for the top 3. Targets "X alternatives" search intent. Added 2026-10 (Phase 1 growth). |
 | `/categories/:slug` | Prerender per category | RootLayout (dense) | Browse by category |
 | `/compare` | Hybrid (prerender popular) | RootLayout | Side-by-side compare; popular combos prerendered |
 | `/search` | SPA | RootLayout | Full search results page |

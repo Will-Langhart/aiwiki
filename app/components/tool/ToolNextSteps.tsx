@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { ArrowRight, BadgeCheck, GitCompare } from "lucide-react";
 import { ToolCard } from "@/components/tool/ToolCard";
+import { canonicalCompareSlug } from "@/lib/compare-data";
+import { ALTERNATIVE_COMPARE_LINKS } from "@/lib/compare-paths";
 
 export interface AlternativeTool {
   id: string;
@@ -42,7 +44,7 @@ interface ToolNextStepsProps {
  */
 export function ToolNextSteps({ tool, category, categoryCount, alternatives, isClaimed = false }: ToolNextStepsProps) {
   if (alternatives.length === 0 && !category) return null;
-  const compares = alternatives.slice(0, 3);
+  const compares = alternatives.slice(0, ALTERNATIVE_COMPARE_LINKS);
 
   return (
     <section aria-labelledby="next-steps" className="space-y-5 border-t border-border pt-8">
@@ -55,14 +57,12 @@ export function ToolNextSteps({ tool, category, categoryCount, alternatives, isC
                 Alternatives to {tool.name}
               </h2>
             </div>
-            {category && (
-              <Link
-                to={`/categories/${category.slug}`}
-                className="hidden sm:inline-flex items-center gap-1 text-sm text-accent hover:underline flex-shrink-0"
-              >
-                All {categoryCount} {category.name.toLowerCase()} tools <ArrowRight size={13} />
-              </Link>
-            )}
+            <Link
+              to={`/tools/${tool.slug}/alternatives`}
+              className="inline-flex items-center gap-1 text-sm text-accent hover:underline flex-shrink-0"
+            >
+              See all alternatives <ArrowRight size={13} />
+            </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {alternatives.map((t) => (
@@ -78,7 +78,7 @@ export function ToolNextSteps({ tool, category, categoryCount, alternatives, isC
           {compares.map((alt) => (
             <Link
               key={alt.slug}
-              to={`/compare?tools=${tool.slug},${alt.slug}`}
+              to={`/compare/${canonicalCompareSlug([tool.slug, alt.slug])}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:border-accent/30 transition-colors"
             >
               <GitCompare size={12} className="text-accent" />

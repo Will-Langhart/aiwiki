@@ -91,6 +91,12 @@ async function main() {
         priority: 0.6,
         lastmod,
       });
+      entries.push({
+        loc: `/tools/${t.slug}/alternatives`,
+        changefreq: "weekly",
+        priority: 0.7,
+        lastmod,
+      });
     }
     for (const c of categories ?? []) {
       entries.push({
