@@ -5,6 +5,17 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Homepage stats prerender as real numbers.** The count-up started from 0, so
+  the static HTML crawlers and no-JS visitors got read "0 categories" / "0+
+  tools indexed". The first hydrated render now shows the real value; the
+  animation still plays on client-side navigations back to `/`.
+- **No more `<UNKNOWN>` chips on tool cards.** Migration `0032` strips LLM
+  placeholder tokens from `integrations` / `key_strengths` via a BEFORE trigger
+  (covers enrichment refresh, Edge Functions, and the admin editor) and cleans
+  the 24 affected tools, ChatGPT and Perplexity among them.
+
 ### Added
 
 - **"Featured on AI Wiki" badge + claim your listing.** `/claim/:slug` gives
