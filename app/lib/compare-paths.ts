@@ -22,7 +22,7 @@ export const ALTERNATIVE_COMPARE_LINKS = 3;
 
 interface AltPairRow {
   slug: string;
-  alt_slug: string;
+  alt_slugs: string[];
 }
 
 interface ToolRow {
@@ -106,10 +106,12 @@ export async function getPopularCompareSlugs(client: SupabaseClient): Promise<Co
   const { data: altPairs } = await client.rpc("tool_alternative_pairs", {
     p_per_tool: ALTERNATIVE_COMPARE_LINKS,
   });
-  for (const p of (altPairs ?? []) as AltPairRow[]) {
-    if (!published.has(p.slug) || !published.has(p.alt_slug)) continue;
-    const slug = [p.slug, p.alt_slug].sort().join("-vs-");
-    if (!results.has(slug)) results.set(slug, { slug });
+  for (const row of (altPairs ?? []) as AltPairRow[]) {
+    for (const alt of row.alt_slugs ?? []) {
+      if (!published.has(row.slug) || !published.has(alt)) continue;
+      const slug = [row.slug, alt].sort().join("-vs-");
+      if (!results.has(slug)) results.set(slug, { slug });
+    }
   }
 
   return [...results.values()];
