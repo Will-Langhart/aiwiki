@@ -7,6 +7,10 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Changed
 
+- **All alternative compare pairs now prerender.** `tool_alternative_pairs`
+  (migration `0034`) returns one row per tool with an array of alternatives
+  (552 rows instead of 1,649), so PostgREST's 1,000-row cap no longer drops
+  pairs — 857 → ~1,330 compare pages. Also ~3x faster (6.4s → 2.1s).
 - Tool-page "Alternatives" block uses the same ranking (falls back to
   same-category order if the RPC is missing) and links to the full page.
 
