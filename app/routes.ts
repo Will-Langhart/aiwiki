@@ -5,6 +5,7 @@ export default [
   layout("components/layout/AppShell.tsx", [
     index("routes/_index.tsx"),
     route("tools", "routes/tools._index.tsx"),
+    route("tools/:slug/alternatives", "routes/tools.$slug.alternatives.tsx"),
     route("tools/:slug", "routes/tools.$slug.tsx", [
       index("routes/tools.$slug._index.tsx"),
       route("docs", "routes/tools.$slug.docs.tsx"),

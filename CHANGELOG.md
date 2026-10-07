@@ -5,6 +5,11 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- Tool-page "Alternatives" block uses the same ranking (falls back to
+  same-category order if the RPC is missing) and links to the full page.
+
 ### Fixed
 
 - **Homepage stats prerender as real numbers.** The count-up started from 0, so
@@ -18,6 +23,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **Alternatives pages (`/tools/:slug/alternatives`).** Prerendered for every
+  published tool: ranked alternatives, an at-a-glance pricing / free tier /
+  API / open-source table, free alternatives, ItemList + breadcrumb JSON-LD.
+  Ranking comes from the new `tool_alternatives` RPC (migration `0033`):
+  embedding similarity, boosted by shared category and in-category
+  popularity, excluding the tool's own company and duplicate listings.
+- **Crawlable compare links.** Tool-page "Compare head-to-head" chips now link
+  to `/compare/a-vs-b` instead of `/compare?tools=a,b`, and every pair linked
+  from an alternatives page (top 3 per tool, via `tool_alternative_pairs`) is
+  prerendered and in the sitemap.
 - **"Featured on AI Wiki" badge + claim your listing.** `/claim/:slug` gives
   any listed tool an embeddable badge (dark/light SVG at `/badges/`, HTML and
   Markdown snippets linking back with `?ref=badge`), and lets a signed-in maker

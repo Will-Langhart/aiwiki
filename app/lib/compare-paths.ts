@@ -14,6 +14,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const VIEWED_COMBOS_LIMIT = 20;
 
+/**
+ * How many of a tool's top alternatives get a "Compare with" link (tool page
+ * chips and alternatives page). Each linked pair is prerendered.
+ */
+export const ALTERNATIVE_COMPARE_LINKS = 3;
+
+interface AltPairRow {
+  slug: string;
+  alt_slug: string;
+}
+
 interface ToolRow {
   slug: string;
   primary_category_id: string | null;
@@ -88,6 +99,17 @@ export async function getPopularCompareSlugs(client: SupabaseClient): Promise<Co
       const slug = [...pair].sort().join("-vs-");
       if (!results.has(slug)) results.set(slug, { slug });
     }
+  }
+
+  // 3. Every pair an alternatives page links to ("Compare with X"), so those
+  //    links land on prerendered HTML. Skipped if the RPC isn't deployed yet.
+  const { data: altPairs } = await client.rpc("tool_alternative_pairs", {
+    p_per_tool: ALTERNATIVE_COMPARE_LINKS,
+  });
+  for (const p of (altPairs ?? []) as AltPairRow[]) {
+    if (!published.has(p.slug) || !published.has(p.alt_slug)) continue;
+    const slug = [p.slug, p.alt_slug].sort().join("-vs-");
+    if (!results.has(slug)) results.set(slug, { slug });
   }
 
   return [...results.values()];
