@@ -649,6 +649,7 @@ Every route is enumerated below with its rendering strategy and purpose. Prerend
 | `/tools/:slug/use-cases` | Prerender per slug | ToolLayout (comfortable) | Use cases & examples |
 | `/tools/:slug/alternatives` | Prerender per slug | RootLayout (comfortable) | Ranked alternatives (`tool_alternatives` RPC), at-a-glance table, links to prerendered `/compare/a-vs-b` for the top 3. Targets "X alternatives" search intent. Added 2026-10 (Phase 1 growth). |
 | `/categories/:slug` | Prerender per category | RootLayout (dense) | Browse by category |
+| `/changes` | Prerender | RootLayout | "What changed in AI tools" — public log of notable, evidence-backed listing changes (pricing, free tier, API, open source) from the last 60 days (§10.6.1). Added 2026-10. |
 | `/compare` | Hybrid (prerender popular) | RootLayout | Side-by-side compare; popular combos prerendered |
 | `/search` | SPA | RootLayout | Full search results page |
 | `/chat` | SPA | ChatLayout | Ask AI Wiki — RAG chat |
@@ -1188,6 +1189,27 @@ ingest → extract → categorize → verify → write → critique ──(retry
   added to the check constraint in migration `0024`) and respects the daily cap.
 - **Rollout:** shadow mode first — enrich into drafts and diff facts against
   `discover-tools` output; cut over once `verify` measurably catches fabrications.
+
+#### 10.6.1 Freshness engine (migration `0035`) — *added 2026-10*
+
+Keeps published listings current and makes that visible.
+
+- **Schedule:** `.github/workflows/freshness.yml` runs refresh mode weekly
+  (`--refresh-batch 50`, most-in-need first, ≈$4/run, bounded by the
+  `enrich_*` daily cap), then fires the Vercel deploy hook if anything was
+  applied so prerendered pages pick up the new facts.
+- **Change log:** every field a refresh writes is recorded in `tool_changes`
+  (old, new, evidence, job). `is_notable` (generated) marks public rows:
+  buying-decision fields that had a prior value. RLS exposes only notable rows
+  on published tools; admins read all.
+- **Last verified:** `tools.last_verified_at` is stamped on every applied
+  refresh. Tool pages show "Facts verified against <site> on <date>" plus recent
+  notable changes, and emit it as JSON-LD `dateModified`.
+- **Public log:** `/changes` (route map above).
+- **Catalog health report:** `scripts/freshness-report.ts` (same workflow, job
+  summary) lists duplicate candidates, unreachable / rebranded / moved sites and
+  the refresh review queue. Report-only — merging duplicates and unpublishing
+  defunct tools stay admin decisions.
 
 ### 10.7 LLM cost guardrails
 

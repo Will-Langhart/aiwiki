@@ -14,8 +14,10 @@ import { RatingDisplay } from "@/components/tool/RatingDisplay";
 import { RatingInput } from "@/components/tool/RatingInput";
 import { ReviewsList } from "@/components/tool/ReviewsList";
 import { WatchToolCard } from "@/components/tool/WatchToolCard";
+import { ToolFreshness } from "@/components/tool/ToolFreshness";
 import { ToolNextSteps, type AlternativeTool } from "@/components/tool/ToolNextSteps";
 import { fetchToolAlternatives } from "@/lib/alternatives";
+import { fetchToolChanges, type ToolChange } from "@/lib/tool-changes";
 import { useAuthModalStore } from "@/stores/auth-modal";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,8 @@ interface FullTool {
   key_strengths: string[];
   status: string;
   published_at: string | null;
+  updated_at: string;
+  last_verified_at: string | null;
 }
 
 interface ContentBlock {
@@ -87,6 +91,8 @@ export interface ToolPublicData {
   /** A maker has a verified claim on this listing. */
   isClaimed: boolean;
   ratingStats: RatingStats;
+  /** Recent notable changes from the refresh pipeline, newest first. */
+  changes: ToolChange[];
 }
 
 interface UserToolData {
@@ -115,7 +121,7 @@ async function fetchToolPublicData(
 
   if (error || !tool) return null;
 
-  const [{ data: blocks }, { data: category }, { data: ratingStats }, { count: verifiedClaims }] = await Promise.all([
+  const [{ data: blocks }, { data: category }, { data: ratingStats }, { count: verifiedClaims }, changes] = await Promise.all([
     client.from("content_blocks").select("*").eq("tool_id", tool.id).order("sort_order"),
     tool.primary_category_id
       ? client.from("categories").select("name, slug").eq("id", tool.primary_category_id).single()
@@ -130,6 +136,7 @@ async function fetchToolPublicData(
       .select("id", { count: "exact", head: true })
       .eq("tool_id", tool.id)
       .eq("status", "verified"),
+    fetchToolChanges(client, tool.id),
   ]);
 
   // "Alternatives" block: ranked by tool_alternatives (similarity + category).
@@ -160,6 +167,7 @@ async function fetchToolPublicData(
       avg_stars: (ratingStats as RatingStats | null)?.avg_stars ?? null,
       rating_count: (ratingStats as RatingStats | null)?.rating_count ?? 0,
     },
+    changes,
   };
 }
 
@@ -253,6 +261,7 @@ export function buildToolMeta(data: ToolPublicData | null | undefined, tab: Tool
         pricing_currency: tool.pricing_currency,
         avg_stars: ratingStats.avg_stars,
         rating_count: ratingStats.rating_count,
+        date_modified: tool.last_verified_at ?? tool.updated_at,
       }),
     ),
     jsonLd(
@@ -339,7 +348,7 @@ export default function ToolLayout() {
     );
   }
 
-  const { tool, blocks, categoryName, categorySlug, alternatives, categoryCount, isClaimed, ratingStats } = data;
+  const { tool, blocks, categoryName, categorySlug, alternatives, categoryCount, isClaimed, ratingStats, changes } = data;
   // Sign in and come straight back here; ?watch=1 completes a pending watch.
   const signInHere = (watch = false) =>
     openAuthModal(`${location.pathname}${watch ? "?watch=1" : ""}`);
@@ -388,6 +397,9 @@ export default function ToolLayout() {
 
       {/* Hero facts */}
       <ToolHero tool={tool} />
+
+      {/* Freshness: when the facts were last checked + what changed */}
+      <ToolFreshness websiteUrl={tool.website_url} lastVerifiedAt={tool.last_verified_at} changes={changes} />
 
       {/* Sign-up hook: alerts on pricing / feature changes (a watch = a bookmark) */}
       <WatchToolCard

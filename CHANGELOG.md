@@ -5,6 +5,19 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Freshness engine** (migration `0035`, SPEC §10.6.1). A weekly GitHub
+  Actions job (`freshness.yml`) re-verifies the 50 stalest tools against their
+  own sites with the enrichment pipeline's refresh mode, then rebuilds the site.
+  Every field a refresh writes is logged to `tool_changes`; tool pages show
+  "Facts verified against <site> on <date>" and recent pricing/free-tier/API
+  changes, and emit `dateModified` in JSON-LD. New prerendered `/changes` page
+  ("What changed in AI tools"), seeded by backfilling the 94 refreshes already
+  applied. A catalog-health report (`scripts/freshness-report.ts`) flags
+  duplicate listings, dead sites, rebrands and the review queue in the job
+  summary.
+
 ### Changed
 
 - **All alternative compare pairs now prerender.** `tool_alternative_pairs`

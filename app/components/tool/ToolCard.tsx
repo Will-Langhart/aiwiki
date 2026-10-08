@@ -64,7 +64,7 @@ function formatStars(n: number): string {
   return String(n);
 }
 
-function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: string | null; size?: "sm" | "md" }) {
+export function ToolLogo({ name, logo_url, size = "md" }: { name: string; logo_url: string | null; size?: "sm" | "md" }) {
   const dim = size === "sm" ? "w-9 h-9" : "w-11 h-11";
   const text = size === "sm" ? "text-sm" : "text-base";
   return (
