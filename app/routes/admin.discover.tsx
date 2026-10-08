@@ -2,12 +2,12 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase.client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, XCircle, Loader2, Globe } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Globe, MinusCircle } from "lucide-react";
 
 interface DiscoverResult {
   url: string;
   slug: string | null;
-  status: "inserted" | "updated" | "error";
+  status: "inserted" | "updated" | "skipped" | "error";
   error?: string;
 }
 
@@ -19,12 +19,14 @@ interface BatchResult {
 const STATUS_ICON = {
   inserted: <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />,
   updated: <CheckCircle2 size={14} className="text-blue-500 shrink-0" />,
+  skipped: <MinusCircle size={14} className="text-text-subtle shrink-0" />,
   error: <XCircle size={14} className="text-danger shrink-0" />,
 };
 
 const STATUS_LABEL = {
   inserted: "inserted",
   updated: "updated",
+  skipped: "already listed",
   error: "error",
 };
 
@@ -145,7 +147,7 @@ export default function AdminDiscover() {
                       /tools/{r.slug}
                     </a>
                   )}
-                  {r.error && <p className="text-xs text-danger mt-0.5">{r.error}</p>}
+                  {r.error && <p className={`text-xs mt-0.5 ${r.status === "skipped" ? "text-text-subtle" : "text-danger"}`}>{r.error}</p>}
                 </div>
                 <span className={`text-xs shrink-0 ${r.status === "error" ? "text-danger" : "text-text-subtle"}`}>
                   {STATUS_LABEL[r.status]}
