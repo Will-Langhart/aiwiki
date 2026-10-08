@@ -9,6 +9,22 @@ function deny(status: 401 | 403, error: string): Response {
 }
 
 /**
+ * True when `token` carries service-role access. Asks Auth's admin API, which
+ * only a valid service key can call — works for the legacy JWT and the newer
+ * secret-key formats alike, so it doesn't depend on which one the runtime's
+ * SUPABASE_SERVICE_ROLE_KEY happens to hold.
+ */
+async function isServiceRole(token: string): Promise<boolean> {
+  const url = Deno.env.get("SUPABASE_URL");
+  if (!url) return false;
+  const res = await fetch(`${url}/auth/v1/admin/users?per_page=1`, {
+    headers: { apikey: token, Authorization: `Bearer ${token}` },
+  });
+  await res.body?.cancel();
+  return res.ok;
+}
+
+/**
  * Gate for admin-only functions. Returns null when the caller may proceed,
  * otherwise the 401/403 response to send.
  *
@@ -25,7 +41,10 @@ export async function requireAdmin(req: Request, supabaseAdmin: SupabaseClient):
   if (serviceKey && token === serviceKey) return null;
 
   const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-  if (!user) return deny(401, "Sign in required");
+  if (!user) {
+    if (await isServiceRole(token)) return null;
+    return deny(401, "Sign in required");
+  }
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
