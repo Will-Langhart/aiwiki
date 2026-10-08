@@ -118,6 +118,21 @@ URL. A URL matching an existing tool's website is skipped before any LLM spend,
 and create mode refuses to write onto an existing slug — it can no longer
 unpublish a live tool.
 
+## Bot-walled sites (reader fallback)
+
+Cloudflare's JS challenge 403s every plain HTTP client from datacenter IPs
+(GitHub Actions) regardless of User-Agent — chatgpt.com, openai.com, make.com,
+ideogram.ai and others. When `ingest` gets a 401/403/429/503, or a 200 that is a
+challenge page or an empty JS shell, it retries that one page through a reader
+service that renders it in a real browser (default `https://r.jina.ai/`, free
+tier, no key). Reader output shorter than 1,500 characters or still showing a
+challenge is rejected, so a failure stays a clear failure. Only public tool
+URLs are sent. `ENRICH_READER_FALLBACK=0` turns it off;
+`ENRICH_READER_URL` points it elsewhere.
+
+Still blocked even through the reader (2026-10-08): midjourney.com,
+perplexity.ai, phind.com.
+
 ## Calibrate: shadow-diff (old vs new)
 
 Runs BOTH the old single-shot extraction (homepage-only, no verification — a

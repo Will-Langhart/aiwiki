@@ -22,6 +22,9 @@ on:
       batch:
         description: "Tools to refresh (most in need first)"
         default: "50"
+      tools:
+        description: "Or refresh these slugs instead (space-separated, e.g. chatgpt claude)"
+        default: ""
       dry_run:
         description: "Run the graph and report diffs without writing"
         type: boolean
@@ -61,7 +64,13 @@ jobs:
         run: |
           flags=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then flags="--dry-run"; fi
-          enrich --refresh-batch "${{ inputs.batch || '50' }}" $flags > results.json
+          if [ -n "$TOOLS" ]; then
+            enrich --refresh $TOOLS $flags > results.json
+          else
+            enrich --refresh-batch "${{ inputs.batch || '50' }}" $flags > results.json
+          fi
+        env:
+          TOOLS: ${{ inputs.tools }}
 
       - name: Summarize
         if: ${{ !cancelled() }}

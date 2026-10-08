@@ -1165,7 +1165,9 @@ ingest → extract → categorize → verify → write → critique ──(retry
 ```
 
 - **Grounding:** `ingest` pulls homepage + `/pricing` + the **GitHub API** (real
-  stars/license/founding year) instead of only the homepage.
+  stars/license/founding year) instead of only the homepage. Bot-walled pages
+  (Cloudflare challenge, empty JS shell) are retried once through a reader
+  service, r.jina.ai (public tool URLs only; approved 2026-10-08).
 - **Evidence gating (the anti-fabrication core):** every extracted fact carries a
   verbatim `evidence` quote; `verify` nulls any fact with missing/low-confidence
   evidence or whose quote isn't found in the sources. The writer only sees
