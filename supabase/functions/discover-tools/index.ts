@@ -2,13 +2,15 @@
  * discover-tools edge function
  *
  * Admin-only. Accepts a list of tool URLs, scrapes each, uses Claude to extract
- * full structured data + content blocks, and upserts directly into public.tools.
+ * full structured data + content blocks, and inserts new tools into public.tools.
+ * URLs or slugs already in the directory (any status) are skipped, never
+ * overwritten — use the enrichment service's refresh mode to update a tool.
  *
  * POST body:
  *   { urls: string[] }          — up to 20 URLs per request
  *
  * Response:
- *   { results: Array<{ url, slug, status, error? }> }
+ *   { results: Array<{ url, slug, status: inserted | skipped | error, error? }> }
  *
  * Cost guardrail: checks llm_usage daily total for feature "discover_tools"
  * and rejects if the estimated cost would exceed $5/day.
@@ -16,6 +18,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireAdmin } from "../_shared/auth.ts";
 import { langevalConfigFromEnv, type Span, Trace, tracedAnthropic } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
@@ -36,6 +39,36 @@ function extractText(html: string): string {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** [host, path] for duplicate detection — mirrors services/enrichment persist._site_key. */
+function siteKey(url: string): [string, string] {
+  try {
+    const u = new URL(url.includes("://") ? url : `https://${url}`);
+    return [u.hostname.toLowerCase().replace(/^www\./, ""), u.pathname.replace(/\/+$/, "").toLowerCase()];
+  } catch {
+    return [url.toLowerCase(), ""];
+  }
+}
+
+interface ExistingTool {
+  slug: string;
+  website_url: string | null;
+  status: string;
+}
+
+/**
+ * The listed tool (any status, archived included) on the same site, if any.
+ * Same host matches when the paths are equal or either is the bare domain, so
+ * openai.com/sora doesn't match openai.com/research/whisper.
+ */
+function findExisting(url: string, existing: ExistingTool[]): ExistingTool | null {
+  const [host, path] = siteKey(url);
+  for (const t of existing) {
+    const [h, p] = siteKey(t.website_url ?? "");
+    if (h === host && (p === path || !p || !path)) return t;
+  }
+  return null;
 }
 
 function slugify(name: string): string {
@@ -270,7 +303,8 @@ async function processUrl(
   supabaseAdmin: ReturnType<typeof createClient>,
   trace: Trace,
   parent: Span,
-): Promise<{ url: string; slug: string | null; status: "inserted" | "updated" | "error"; error?: string }> {
+  existingSlugs: Set<string>,
+): Promise<{ url: string; slug: string | null; status: "inserted" | "updated" | "skipped" | "error"; error?: string }> {
   // One span per URL. Failures are returned rather than thrown, so the span is
   // marked failed by hand in the catch below.
   const span = trace
@@ -339,13 +373,19 @@ Return the JSON schema I specified. For content sections (overview_technical, ov
 
     const d = toolUse.input as Record<string, unknown>;
     const slug = slugify(d.name as string);
+    // Never overwrite an existing listing — that's how archived tools came back
+    // as published and same-name tools collided. Refresh mode updates tools.
+    if (existingSlugs.has(slug)) {
+      span.set({ "aiwiki.slug": slug }).content("output", { slug, status: "skipped" });
+      return { url, slug, status: "skipped", error: `slug "${slug}" already exists` };
+    }
     const categorySlug = resolveCategory(d.primary_category as string);
     const categoryId = catMap[categorySlug] ?? null;
 
     // 3. Upsert tool
     const { data: tool, error: toolErr } = await supabaseAdmin
       .from("tools")
-      .upsert(
+      .insert(
         {
           slug,
           name: d.name as string,
@@ -373,7 +413,6 @@ Return the JSON schema I specified. For content sections (overview_technical, ov
           status: "published",
           published_at: new Date().toISOString(),
         },
-        { onConflict: "slug", ignoreDuplicates: false }
       )
       .select("id")
       .single();
@@ -435,29 +474,10 @@ Deno.serve(async (req) => {
   );
 
   try {
-    // Admin-only: verify the caller is an admin
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const userClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user } } = await userClient.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", user.id)
-          .single();
-        if (!profile?.is_admin) {
-          return new Response(JSON.stringify({ error: "Admin only" }), {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
+    // Admin-only. (The old check was skipped whenever no user was signed in,
+    // so the public anon key could publish tools.)
+    const denied = await requireAdmin(req, supabaseAdmin);
+    if (denied) return denied;
 
     // Daily cost cap
     const today = new Date();
@@ -496,10 +516,24 @@ Deno.serve(async (req) => {
       .start("discover-tools", { "openinference.span.kind": "CHAIN", "aiwiki.url_count": urls.length })
       .content("input", urls);
 
+    // Every listed tool, any status: a URL already in the directory (or archived
+    // as a duplicate / defunct) is skipped before any LLM spend.
+    const { data: existingRows } = await supabaseAdmin
+      .from("tools")
+      .select("slug, website_url, status")
+      .range(0, 9999);
+    const existing = (existingRows ?? []) as ExistingTool[];
+    const existingSlugs = new Set(existing.map((t) => t.slug));
+
     // Process URLs sequentially to avoid rate limits
     const results = [];
     for (const url of urls) {
-      const result = await processUrl(url, catMap, supabaseAdmin, trace, root);
+      const dup = findExisting(url, existing);
+      if (dup) {
+        results.push({ url, slug: dup.slug, status: "skipped" as const, error: `already listed as ${dup.slug} (${dup.status})` });
+        continue;
+      }
+      const result = await processUrl(url, catMap, supabaseAdmin, trace, root, existingSlugs);
       results.push(result);
       console.log(`[discover-tools] ${result.status.toUpperCase()} ${url} → ${result.slug ?? result.error}`);
     }
