@@ -20,6 +20,17 @@ All notable changes to AI Wiki are documented here. Format loosely follows
   tools.** URLs already listed (any status) are skipped before any LLM spend,
   and an existing slug is never overwritten (insert, not upsert).
 
+### Removed
+
+- **Catalog cleanup** (migration `0036`, data-only). Archived 18 duplicate
+  listings (e.g. `codeium` → `windsurf`, `google-gemini` → `gemini`,
+  `v0-by-vercel` → `v0`) and 7 defunct tools (Play.ht, Sweep, Tome, Mutable AI,
+  Magician ×2, Neptune.ai). `vercel.json` 301-redirects every archived tool
+  URL — and compare pages that include one — to the kept listing or the
+  category. Updated 29 `website_url`s that had moved (cursor.sh → cursor.com,
+  notion.so → notion.com, windsurf.com → devin.ai/desktop, …). 552 → 527
+  published tools.
+
 ### Added
 
 - **Freshness engine** (migration `0035`, SPEC §10.6.1). A weekly GitHub
