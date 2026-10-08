@@ -48,14 +48,70 @@ def _domain(url: str) -> str:
         return url
 
 
+# Statuses a bot wall (Cloudflare's JS challenge, etc.) answers with. A browser
+# UA doesn't get past these — chatgpt.com, perplexity.ai, midjourney.com and
+# make.com all 403 every plain HTTP client — so they go to the reader fallback.
+_BLOCKED = {401, 403, 429, 503}
+_CHALLENGE_RE = re.compile(r"just a moment|verify you are human|cf-chl|challenge-platform", re.IGNORECASE)
+# Below this, reader output is a JS shell or a challenge page, not content.
+_READER_MIN_CHARS = 1_500
+# A 200 whose visible text is shorter than this is a client-rendered JS shell
+# (perplexity.ai serves 18KB of HTML with ~10 characters of text).
+_JS_SHELL_MAX_CHARS = 200
+_MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+
+
+def _reader_enabled() -> bool:
+    return os.environ.get("ENRICH_READER_FALLBACK", "1") not in ("0", "false", "")
+
+
+def _fetch_via_reader(client: httpx.Client, url: str) -> tuple[str | None, str]:
+    """Fetch a bot-walled page through a reader service that renders it in a
+    real browser (default r.jina.ai, free tier, no key). Only public tool URLs
+    are ever sent. Returns plain text (markdown links flattened), or None."""
+    base = os.environ.get("ENRICH_READER_URL", "https://r.jina.ai/")
+    try:
+        r = client.get(f"{base}{url}", headers={"Accept": "text/plain"}, timeout=45)
+    except Exception as exc:  # noqa: BLE001
+        return None, f"reader error: {type(exc).__name__}"
+    if r.status_code != 200:
+        return None, f"reader HTTP {r.status_code}"
+    text = r.text.split("Markdown Content:", 1)[-1]
+    # Flatten links to their text, except GitHub ones — _github_target needs the URL.
+    text = _MD_LINK_RE.sub(lambda m: m.group(0) if "github.com/" in m.group(0) else m.group(1), text)
+    if len(text) < _READER_MIN_CHARS or _CHALLENGE_RE.search(text[:3_000]):
+        return None, "reader got no content (still blocked)"
+    return text, ""
+
+
 def _fetch(client: httpx.Client, url: str) -> tuple[str | None, str]:
-    """Return (html_or_none, reason). reason is '' on success, else diagnostic."""
+    """Return (html_or_none, reason). reason is '' on success, else diagnostic.
+
+    A bot-walled page (403/429/503 or a challenge body) is retried once through
+    the reader service; its plain-text output passes through _to_text unchanged.
+    So is a 200 that is only a JS shell — but there the original page is kept
+    if the reader can't do better.
+    """
     try:
         r = client.get(url, headers=_UA, follow_redirects=True, timeout=20)
     except Exception as exc:  # noqa: BLE001
         return None, f"request error: {type(exc).__name__}"
+    if r.status_code in _BLOCKED and _reader_enabled():
+        text, err = _fetch_via_reader(client, url)
+        if text:
+            return text, ""
+        return None, f"HTTP {r.status_code}; {err}"
     if not (200 <= r.status_code < 300):
         return None, f"HTTP {r.status_code}"
+    # A 200 that's a challenge page or an empty JS shell: try the reader, but keep
+    # the original if the reader can't do better.
+    is_html = "html" in r.headers.get("content-type", "")
+    if _reader_enabled() and is_html and (
+        _CHALLENGE_RE.search(r.text[:5_000]) or len(_to_text(r.text)) < _JS_SHELL_MAX_CHARS
+    ):
+        text, _ = _fetch_via_reader(client, url)
+        if text:
+            return text, ""
     ctype = r.headers.get("content-type", "")
     if ctype and not any(t in ctype for t in ("html", "xml", "text/plain")):
         return None, f"non-HTML content-type: {ctype}"

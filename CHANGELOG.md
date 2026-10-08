@@ -5,6 +5,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Bot-walled tools refresh again.** Cloudflare's JS challenge 403'd every
+  refresh of ChatGPT, OpenAI Platform, Whisper, Make and Ideogram from GitHub
+  Actions. `ingest` now retries a blocked page (or an empty JS shell) once
+  through the r.jina.ai reader, which renders it in a real browser — ChatGPT's
+  pricing page now yields its real plans. Claude's `website_url` moves to
+  claude.com (migration `0037`); claude.ai is the challenged app. Midjourney,
+  Perplexity and Phind stay blocked even through the reader.
+
 ### Security
 
 - **`reenrich-tools` and `discover-tools` now require an admin** (or the
