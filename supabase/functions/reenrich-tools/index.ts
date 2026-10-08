@@ -14,6 +14,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.39";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireAdmin } from "../_shared/auth.ts";
 import { langevalConfigFromEnv, type Span, Trace, tracedAnthropic } from "../_shared/langeval.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
@@ -134,6 +135,11 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
+
+  // Admin / service-role only: callers supply the URL that gets scraped into a
+  // live tool's fields, so an open endpoint would let anyone rewrite listings.
+  const denied = await requireAdmin(req, supabaseAdmin);
+  if (denied) return denied;
 
   try {
     // Daily cost cap

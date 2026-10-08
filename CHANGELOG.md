@@ -5,6 +5,21 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Security
+
+- **`reenrich-tools` and `discover-tools` now require an admin** (or the
+  service-role key). `reenrich-tools` had no auth check and was deployed with
+  `verify_jwt = false`, so anyone could rewrite a tool's pricing/integrations
+  from a URL of their choosing; `discover-tools` skipped its admin check when
+  no user was signed in, so the public anon key could publish tools. Shared
+  gate in `supabase/functions/_shared/auth.ts`.
+
+### Fixed
+
+- **`discover-tools` no longer creates duplicates or resurrects archived
+  tools.** URLs already listed (any status) are skipped before any LLM spend,
+  and an existing slug is never overwritten (insert, not upsert).
+
 ### Added
 
 - **Freshness engine** (migration `0035`, SPEC §10.6.1). A weekly GitHub
