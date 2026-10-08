@@ -5,127 +5,252 @@
   "installCommand": "npm install",
   "redirects": [
     {
-      "source": "/tools/amazon-q/:path*",
-      "destination": "/tools/amazon-q-developer/:path*",
+      "source": "/tools/amazon-q",
+      "destination": "/tools/amazon-q-developer",
       "permanent": true
     },
     {
-      "source": "/tools/cody-by-sourcegraph/:path*",
-      "destination": "/tools/cody/:path*",
+      "source": "/tools/amazon-q/:path+",
+      "destination": "/tools/amazon-q-developer/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/continue/:path*",
-      "destination": "/tools/continue-dev/:path*",
+      "source": "/tools/cody-by-sourcegraph",
+      "destination": "/tools/cody",
       "permanent": true
     },
     {
-      "source": "/tools/google-gemini/:path*",
-      "destination": "/tools/gemini/:path*",
+      "source": "/tools/cody-by-sourcegraph/:path+",
+      "destination": "/tools/cody/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/jenni/:path*",
-      "destination": "/tools/jenni-ai/:path*",
+      "source": "/tools/continue",
+      "destination": "/tools/continue-dev",
       "permanent": true
     },
     {
-      "source": "/tools/kling/:path*",
-      "destination": "/tools/kling-ai/:path*",
+      "source": "/tools/continue/:path+",
+      "destination": "/tools/continue-dev/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/mistral-le-chat/:path*",
-      "destination": "/tools/le-chat/:path*",
+      "source": "/tools/google-gemini",
+      "destination": "/tools/gemini",
       "permanent": true
     },
     {
-      "source": "/tools/nice/:path*",
-      "destination": "/tools/nice-cxone/:path*",
+      "source": "/tools/google-gemini/:path+",
+      "destination": "/tools/gemini/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/replit/:path*",
-      "destination": "/tools/replit-ai/:path*",
+      "source": "/tools/jenni",
+      "destination": "/tools/jenni-ai",
       "permanent": true
     },
     {
-      "source": "/tools/semrush/:path*",
-      "destination": "/tools/semrush-ai/:path*",
+      "source": "/tools/jenni/:path+",
+      "destination": "/tools/jenni-ai/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/timeos-timeless/:path*",
-      "destination": "/tools/timeos/:path*",
+      "source": "/tools/kling",
+      "destination": "/tools/kling-ai",
       "permanent": true
     },
     {
-      "source": "/tools/ultimate-ai-zendesk-ai-agents/:path*",
-      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai/:path*",
+      "source": "/tools/kling/:path+",
+      "destination": "/tools/kling-ai/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/v0-by-vercel/:path*",
-      "destination": "/tools/v0/:path*",
+      "source": "/tools/mistral-le-chat",
+      "destination": "/tools/le-chat",
       "permanent": true
     },
     {
-      "source": "/tools/weights-biases/:path*",
-      "destination": "/tools/weights-and-biases/:path*",
+      "source": "/tools/mistral-le-chat/:path+",
+      "destination": "/tools/le-chat/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/zapier-ai/:path*",
-      "destination": "/tools/zapier/:path*",
+      "source": "/tools/nice",
+      "destination": "/tools/nice-cxone",
       "permanent": true
     },
     {
-      "source": "/tools/codeium/:path*",
-      "destination": "/tools/windsurf/:path*",
+      "source": "/tools/nice/:path+",
+      "destination": "/tools/nice-cxone/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/windsurf-devin-desktop/:path*",
-      "destination": "/tools/windsurf/:path*",
+      "source": "/tools/replit",
+      "destination": "/tools/replit-ai",
       "permanent": true
     },
     {
-      "source": "/tools/comet-opik/:path*",
-      "destination": "/tools/opik/:path*",
+      "source": "/tools/replit/:path+",
+      "destination": "/tools/replit-ai/:path+",
       "permanent": true
     },
     {
-      "source": "/tools/play-ht/:path*",
+      "source": "/tools/semrush",
+      "destination": "/tools/semrush-ai",
+      "permanent": true
+    },
+    {
+      "source": "/tools/semrush/:path+",
+      "destination": "/tools/semrush-ai/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/timeos-timeless",
+      "destination": "/tools/timeos",
+      "permanent": true
+    },
+    {
+      "source": "/tools/timeos-timeless/:path+",
+      "destination": "/tools/timeos/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/ultimate-ai-zendesk-ai-agents",
+      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai",
+      "permanent": true
+    },
+    {
+      "source": "/tools/ultimate-ai-zendesk-ai-agents/:path+",
+      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/v0-by-vercel",
+      "destination": "/tools/v0",
+      "permanent": true
+    },
+    {
+      "source": "/tools/v0-by-vercel/:path+",
+      "destination": "/tools/v0/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/weights-biases",
+      "destination": "/tools/weights-and-biases",
+      "permanent": true
+    },
+    {
+      "source": "/tools/weights-biases/:path+",
+      "destination": "/tools/weights-and-biases/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/zapier-ai",
+      "destination": "/tools/zapier",
+      "permanent": true
+    },
+    {
+      "source": "/tools/zapier-ai/:path+",
+      "destination": "/tools/zapier/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/codeium",
+      "destination": "/tools/windsurf",
+      "permanent": true
+    },
+    {
+      "source": "/tools/codeium/:path+",
+      "destination": "/tools/windsurf/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/windsurf-devin-desktop",
+      "destination": "/tools/windsurf",
+      "permanent": true
+    },
+    {
+      "source": "/tools/windsurf-devin-desktop/:path+",
+      "destination": "/tools/windsurf/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/comet-opik",
+      "destination": "/tools/opik",
+      "permanent": true
+    },
+    {
+      "source": "/tools/comet-opik/:path+",
+      "destination": "/tools/opik/:path+",
+      "permanent": true
+    },
+    {
+      "source": "/tools/play-ht",
       "destination": "/categories/voice",
       "permanent": true
     },
     {
-      "source": "/tools/sweep/:path*",
+      "source": "/tools/play-ht/:path+",
+      "destination": "/categories/voice",
+      "permanent": true
+    },
+    {
+      "source": "/tools/sweep",
       "destination": "/categories/coding",
       "permanent": true
     },
     {
-      "source": "/tools/tome/:path*",
+      "source": "/tools/sweep/:path+",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/tools/tome",
       "destination": "/categories/presentations-docs",
       "permanent": true
     },
     {
-      "source": "/tools/mutable-ai/:path*",
+      "source": "/tools/tome/:path+",
+      "destination": "/categories/presentations-docs",
+      "permanent": true
+    },
+    {
+      "source": "/tools/mutable-ai",
       "destination": "/categories/coding",
       "permanent": true
     },
     {
-      "source": "/tools/magician/:path*",
+      "source": "/tools/mutable-ai/:path+",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/tools/magician",
       "destination": "/categories/design",
       "permanent": true
     },
     {
-      "source": "/tools/magician-for-figma/:path*",
+      "source": "/tools/magician/:path+",
       "destination": "/categories/design",
       "permanent": true
     },
     {
-      "source": "/tools/neptune-ai/:path*",
+      "source": "/tools/magician-for-figma",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/tools/magician-for-figma/:path+",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/tools/neptune-ai",
+      "destination": "/categories/mlops-training",
+      "permanent": true
+    },
+    {
+      "source": "/tools/neptune-ai/:path+",
       "destination": "/categories/mlops-training",
       "permanent": true
     },
