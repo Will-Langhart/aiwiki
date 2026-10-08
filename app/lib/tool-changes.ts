@@ -1,7 +1,8 @@
 /**
  * Public tool change log (migration 0035). Rows are written by the enrichment
- * pipeline's refresh mode; RLS only exposes `is_notable` rows on published
- * tools, so every query here returns buying-decision changes only.
+ * pipeline's refresh mode. RLS only exposes `is_notable` rows on published
+ * tools, but the prerender loader uses the service-role key (bypasses RLS), so
+ * every query here filters on both explicitly.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -75,6 +76,7 @@ export async function fetchToolChanges(client: SupabaseClient, toolId: string, l
     .from("tool_changes")
     .select("id, field, old_value, new_value, created_at")
     .eq("tool_id", toolId)
+    .eq("is_notable", true)
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as ToolChange[];
@@ -84,7 +86,9 @@ export async function fetchRecentChanges(client: SupabaseClient, days = 60, limi
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { data } = await client
     .from("tool_changes")
-    .select("id, field, old_value, new_value, created_at, tool:tools!inner(slug, name, logo_url)")
+    .select("id, field, old_value, new_value, created_at, tool:tools!inner(slug, name, logo_url, status)")
+    .eq("is_notable", true)
+    .eq("tool.status", "published")
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(limit);
