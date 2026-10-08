@@ -2,5 +2,382 @@
   "framework": "react-router",
   "buildCommand": "npm run build",
   "outputDirectory": "build/client",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "redirects": [
+    {
+      "source": "/tools/amazon-q/:path*",
+      "destination": "/tools/amazon-q-developer/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/cody-by-sourcegraph/:path*",
+      "destination": "/tools/cody/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/continue/:path*",
+      "destination": "/tools/continue-dev/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/google-gemini/:path*",
+      "destination": "/tools/gemini/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/jenni/:path*",
+      "destination": "/tools/jenni-ai/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/kling/:path*",
+      "destination": "/tools/kling-ai/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/mistral-le-chat/:path*",
+      "destination": "/tools/le-chat/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/nice/:path*",
+      "destination": "/tools/nice-cxone/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/replit/:path*",
+      "destination": "/tools/replit-ai/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/semrush/:path*",
+      "destination": "/tools/semrush-ai/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/timeos-timeless/:path*",
+      "destination": "/tools/timeos/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/ultimate-ai-zendesk-ai-agents/:path*",
+      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/v0-by-vercel/:path*",
+      "destination": "/tools/v0/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/weights-biases/:path*",
+      "destination": "/tools/weights-and-biases/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/zapier-ai/:path*",
+      "destination": "/tools/zapier/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/codeium/:path*",
+      "destination": "/tools/windsurf/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/windsurf-devin-desktop/:path*",
+      "destination": "/tools/windsurf/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/comet-opik/:path*",
+      "destination": "/tools/opik/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/tools/play-ht/:path*",
+      "destination": "/categories/voice",
+      "permanent": true
+    },
+    {
+      "source": "/tools/sweep/:path*",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/tools/tome/:path*",
+      "destination": "/categories/presentations-docs",
+      "permanent": true
+    },
+    {
+      "source": "/tools/mutable-ai/:path*",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/tools/magician/:path*",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/tools/magician-for-figma/:path*",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/tools/neptune-ai/:path*",
+      "destination": "/categories/mlops-training",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-amazon-q",
+      "destination": "/tools/amazon-q-developer/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/amazon-q-vs-:other",
+      "destination": "/tools/amazon-q-developer/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-cody-by-sourcegraph",
+      "destination": "/tools/cody/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/cody-by-sourcegraph-vs-:other",
+      "destination": "/tools/cody/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-continue",
+      "destination": "/tools/continue-dev/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/continue-vs-:other",
+      "destination": "/tools/continue-dev/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-google-gemini",
+      "destination": "/tools/gemini/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/google-gemini-vs-:other",
+      "destination": "/tools/gemini/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-jenni",
+      "destination": "/tools/jenni-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/jenni-vs-:other",
+      "destination": "/tools/jenni-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-kling",
+      "destination": "/tools/kling-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/kling-vs-:other",
+      "destination": "/tools/kling-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-mistral-le-chat",
+      "destination": "/tools/le-chat/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/mistral-le-chat-vs-:other",
+      "destination": "/tools/le-chat/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-nice",
+      "destination": "/tools/nice-cxone/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/nice-vs-:other",
+      "destination": "/tools/nice-cxone/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-replit",
+      "destination": "/tools/replit-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/replit-vs-:other",
+      "destination": "/tools/replit-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-semrush",
+      "destination": "/tools/semrush-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/semrush-vs-:other",
+      "destination": "/tools/semrush-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-timeos-timeless",
+      "destination": "/tools/timeos/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/timeos-timeless-vs-:other",
+      "destination": "/tools/timeos/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-ultimate-ai-zendesk-ai-agents",
+      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/ultimate-ai-zendesk-ai-agents-vs-:other",
+      "destination": "/tools/zendesk-ai-agents-formerly-ultimate-ai/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-v0-by-vercel",
+      "destination": "/tools/v0/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/v0-by-vercel-vs-:other",
+      "destination": "/tools/v0/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-weights-biases",
+      "destination": "/tools/weights-and-biases/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/weights-biases-vs-:other",
+      "destination": "/tools/weights-and-biases/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-zapier-ai",
+      "destination": "/tools/zapier/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/zapier-ai-vs-:other",
+      "destination": "/tools/zapier/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-codeium",
+      "destination": "/tools/windsurf/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/codeium-vs-:other",
+      "destination": "/tools/windsurf/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-windsurf-devin-desktop",
+      "destination": "/tools/windsurf/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/windsurf-devin-desktop-vs-:other",
+      "destination": "/tools/windsurf/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-comet-opik",
+      "destination": "/tools/opik/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/comet-opik-vs-:other",
+      "destination": "/tools/opik/alternatives",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-play-ht",
+      "destination": "/categories/voice",
+      "permanent": true
+    },
+    {
+      "source": "/compare/play-ht-vs-:other",
+      "destination": "/categories/voice",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-sweep",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/compare/sweep-vs-:other",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-tome",
+      "destination": "/categories/presentations-docs",
+      "permanent": true
+    },
+    {
+      "source": "/compare/tome-vs-:other",
+      "destination": "/categories/presentations-docs",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-mutable-ai",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/compare/mutable-ai-vs-:other",
+      "destination": "/categories/coding",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-magician",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/compare/magician-vs-:other",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-magician-for-figma",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/compare/magician-for-figma-vs-:other",
+      "destination": "/categories/design",
+      "permanent": true
+    },
+    {
+      "source": "/compare/:other-vs-neptune-ai",
+      "destination": "/categories/mlops-training",
+      "permanent": true
+    },
+    {
+      "source": "/compare/neptune-ai-vs-:other",
+      "destination": "/categories/mlops-training",
+      "permanent": true
+    }
+  ]
 }
