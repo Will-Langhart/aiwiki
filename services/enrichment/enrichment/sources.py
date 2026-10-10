@@ -58,6 +58,7 @@ _READER_MIN_CHARS = 1_500
 # A 200 whose visible text is shorter than this is a client-rendered JS shell
 # (perplexity.ai serves 18KB of HTML with ~10 characters of text).
 _JS_SHELL_MAX_CHARS = 200
+_PRICE_RE = re.compile(r"[$€£]\s?\d")
 _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 
 
@@ -183,9 +184,15 @@ def ingest(url: str) -> list[Source]:
                 {"origin_url": url, "kind": "homepage", "text": _to_text(home_html)[:12_000]}
             )
 
-        # Pricing page — try the conventional path.
+        # Pricing page — try the conventional path. Many render their plans with
+        # JS (chatgpt.com/pricing: 24K chars of static text, not one price), so
+        # a pricing page without a single amount gets one try via the reader.
         pricing_url = urljoin(url, "/pricing")
         pricing_html, _ = _fetch(client, pricing_url)
+        if pricing_html and _reader_enabled() and not _PRICE_RE.search(_to_text(pricing_html)):
+            rendered, _ = _fetch_via_reader(client, pricing_url)
+            if rendered and _PRICE_RE.search(rendered):
+                pricing_html = rendered
         if pricing_html:
             sources.append(
                 {"origin_url": pricing_url, "kind": "pricing", "text": _to_text(pricing_html)[:6_000]}
