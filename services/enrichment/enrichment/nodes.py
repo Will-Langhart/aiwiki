@@ -84,7 +84,10 @@ _EXTRACT_SYSTEM = (
     "exact supporting text in `evidence`. If a fact is not stated in the sources, "
     "set its value to null and evidence to null — DO NOT guess, infer, or use prior "
     "knowledge. Prefer the GitHub API source (marked authoritative) for stars, "
-    "license, open-source status, and founding year."
+    "license, open-source status, and founding year. `integrations` are third-party "
+    "products the tool connects to or runs inside (Slack, Canva, VS Code) — never "
+    "sign-in options (\"Continue with Google/Microsoft/Apple\"), app stores, or "
+    "payment methods."
 )
 
 
