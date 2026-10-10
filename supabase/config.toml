@@ -60,3 +60,7 @@ policy = "per_worker"
 
 [analytics]
 enabled = false
+
+[functions.stripe-webhook]
+# Stripe calls this directly; requests are authenticated by Stripe-Signature.
+verify_jwt = false
