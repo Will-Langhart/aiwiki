@@ -34,6 +34,10 @@ const INPUT_COST_PER_M = 3;
 const OUTPUT_COST_PER_M = 15;
 const DAILY_COST_CAP_USD = 2.0;
 const CANDIDATES = 15;
+// Similarity alone surfaces niche tools with on-the-nose descriptions and can
+// miss the market leaders ("best AI coding assistant" retrieved no Cursor or
+// GitHub Copilot). Add the most popular tools from the question's main category.
+const POPULAR_PER_CATEGORY = 6;
 
 interface ToolRow extends CandidateFacts {
   id: string;
@@ -45,6 +49,15 @@ interface ToolRow extends CandidateFacts {
   api_available: boolean;
   key_strengths: string[] | null;
   last_verified_at: string | null;
+  popularity_score: number | null;
+  traffic_tier: string | null;
+}
+
+/** Coarse usage signal for the writer; raw scores mean nothing to it. */
+function usageLabel(t: ToolRow): string | null {
+  if (t.traffic_tier === "xlarge" || (t.popularity_score ?? 0) >= 80) return "very widely used";
+  if (t.traffic_tier === "large" || (t.popularity_score ?? 0) >= 40) return "widely used";
+  return null;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -65,6 +78,13 @@ async function embedText(text: string): Promise<{ embedding: number[]; tokens?: 
   return { embedding: body.data[0].embedding, tokens: body.usage?.prompt_tokens };
 }
 
+/** Shorten to `max` chars at a word boundary — never "…for ter". */
+function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\s]+$/, "")}…`;
+}
+
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "");
 }
@@ -81,6 +101,7 @@ function factSheet(t: ToolRow, category: string | null, overview: string): strin
     `[tool:${t.slug}] ${t.name} — ${t.tagline}`,
     category ? `category: ${category}` : null,
     `pricing: ${price}`,
+    usageLabel(t) ? `usage: ${usageLabel(t)}` : null,
     `audience: ${t.audience_fit.replace("_", " ")}; API: ${t.api_available ? "yes" : "no"}; open source: ${t.open_source ? "yes" : "no"}; self-hostable: ${t.self_hostable ? "yes" : "no"}`,
     t.key_strengths?.length ? `strengths: ${t.key_strengths.join(", ")}` : null,
     overview ? `overview: ${overview}` : null,
@@ -93,8 +114,8 @@ Hard rules:
 - Use ONLY the tools in the fact sheets, and ONLY the facts stated there. Never add a feature, price, plan name, limit or model that isn't in a tool's sheet. If the sheets don't support a claim, leave it out.
 - Refer to a tool ONLY as its marker, exactly as given: [tool:slug]. The page turns markers into links with the tool's name, so never write the name next to the marker.
 - Quote prices exactly as the sheet states them ("$20/mo"). Don't round, convert or estimate. Omit a price you don't have.
-- Pick the 3–8 tools that genuinely fit the question; skip candidates that don't. If the question asks for free or open-source tools, only pick tools whose sheet says so.
-- Don't mention AI Wiki, "our directory", dates, or that facts may change.
+- Pick the 3–8 tools that genuinely fit the question; skip candidates that don't. For "best"/"top" questions, the widely used leaders that fit belong on the page — readers expect them — alongside strong specialists. If the question asks for free or open-source tools, only pick tools whose sheet says so.
+- Don't mention AI Wiki, "our directory", or that facts may change. Never write a year or date anywhere — question, summary or body ("in 2024" makes a page look stale the day it ships).
 
 Page shape (markdown, no H1 — the question is the page title):
 1. A 2–3 sentence direct answer naming the top pick(s) and who each is for.
@@ -108,7 +129,7 @@ const DRAFT_SCHEMA = {
   properties: {
     question: { type: "string", description: "The page title: the visitor's question, cleaned up as a natural, specific search query ending in '?'. E.g. 'What are the best free AI image generators?'" },
     slug: { type: "string", description: "kebab-case URL slug, ≤60 chars, keyword-first. E.g. 'best-free-ai-image-generators'" },
-    summary: { type: "string", description: "Meta description, ≤155 chars, plain text (no markers): the direct answer in one sentence." },
+    summary: { type: "string", description: "Meta description, ≤155 chars, plain text (no markers, no years): the direct answer in one sentence." },
     answer_md: { type: "string", description: "The page body in markdown, following the page shape." },
     tool_slugs: { type: "array", items: { type: "string" }, description: "Slugs of the tools the page recommends, best first (3–8)." },
     category_slug: { type: ["string", "null"], description: "The single category slug that best fits the question, from the list given, or null." },
@@ -154,10 +175,30 @@ Deno.serve(async (req) => {
     const ids = ((matched ?? []) as Array<{ id: string }>).map((m) => m.id);
     if (ids.length < 3) return json({ error: "Not enough matching tools in the directory to answer this" }, 422);
 
+    // Main category = most common among the top 5 hits; add its popular leaders.
+    const { data: topCats } = await supabaseAdmin
+      .from("tools").select("primary_category_id").in("id", ids.slice(0, 5));
+    const catCounts = new Map<string, number>();
+    for (const r of topCats ?? []) {
+      if (r.primary_category_id) catCounts.set(r.primary_category_id, (catCounts.get(r.primary_category_id) ?? 0) + 1);
+    }
+    const mainCat = [...catCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (mainCat) {
+      const { data: popular } = await supabaseAdmin
+        .from("tools")
+        .select("id")
+        .eq("status", "published")
+        .eq("primary_category_id", mainCat)
+        .gt("popularity_score", 0)
+        .order("popularity_score", { ascending: false })
+        .limit(POPULAR_PER_CATEGORY);
+      for (const p of popular ?? []) if (!ids.includes(p.id)) ids.push(p.id);
+    }
+
     const [{ data: toolRows }, { data: blocks }, { data: categories }] = await Promise.all([
       supabaseAdmin
         .from("tools")
-        .select("id, slug, name, tagline, pricing_tier, has_free_tier, pricing_starts_at, pricing_currency, pricing_detail, audience_fit, open_source, self_hostable, api_available, key_strengths, last_verified_at, primary_category_id")
+        .select("id, slug, name, tagline, pricing_tier, has_free_tier, pricing_starts_at, pricing_currency, pricing_detail, audience_fit, open_source, self_hostable, api_available, key_strengths, last_verified_at, primary_category_id, popularity_score, traffic_tier")
         .in("id", ids)
         .eq("status", "published"),
       supabaseAdmin
@@ -219,7 +260,7 @@ Deno.serve(async (req) => {
       slug,
       question: d.question.trim(),
       answer_md: d.answer_md.trim(),
-      summary: d.summary.trim().slice(0, 160),
+      summary: clip(d.summary.trim(), 160),
       tool_ids: toolSlugs.map((s) => bySlug.get(s)?.id),
       category_id: (categories ?? []).find((c) => c.slug === d.category_slug)?.id ?? null,
       source_message_id: source_message_id ?? null,
