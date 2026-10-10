@@ -279,8 +279,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get or create session
+    // Get or create session. A client-supplied session_id is only honoured if it
+    // belongs to this caller (same signed-in user, or anonymous → anonymous);
+    // otherwise its history would be loaded into this caller's context. A
+    // mismatch starts a fresh session instead of failing the message.
     let sessionId = session_id;
+    if (sessionId) {
+      const { data: existing } = await supabaseAdmin
+        .from("chat_sessions")
+        .select("user_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (!existing || (existing.user_id ?? null) !== userId) sessionId = undefined;
+    }
     if (!sessionId) {
       const { data: sess } = await supabaseAdmin
         .from("chat_sessions")
