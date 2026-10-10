@@ -26,7 +26,7 @@
 - Lighthouse Performance ≥ 95 on every prerendered route
 
 ### Non-goals
-- No marketplace / no transactions (we don't sell access to tools)
+- No marketplace / no transactions with users (we don't sell access to tools). The one paid product is vendor-side: Featured listings (§18).
 - No affiliate links in v1 (revisit when traffic justifies)
 - No video content hosting (link out to YouTube etc.)
 - No private workspaces (this is a public wiki)
@@ -1305,6 +1305,10 @@ OPENAI_API_KEY=sk-...                    # only used for embeddings
 RESEND_API_KEY=re_...
 VERCEL_DEPLOY_HOOK_URL=https://api.vercel.com/v1/integrations/deploy/...
 EDGE_FUNCTION_SECRET=                    # shared secret for DB → Edge Function calls
+STRIPE_SECRET_KEY=sk_live_...            # featured-billing + stripe-webhook (§18)
+STRIPE_WEBHOOK_SECRET=whsec_...          # stripe-webhook signature verification
+STRIPE_FEATURED_PRICE_ID=price_...       # the $29/mo Featured price
+SITE_URL=https://aiwiki.io               # Checkout / Billing Portal return URLs
 
 # ============================================================================
 # Cost caps (USD/day per feature; enforced server-side)
@@ -1653,6 +1657,19 @@ These are decisions intentionally deferred to be made when the work is in front 
 - **Custom email sender domain** — `noreply@aiwiki.io`; requires Resend domain verification (SPF + DKIM).
 - **Pricing for AI features in long run** — v1 is unmetered for users; if costs spike, gate the chat behind sign-in or rate-limit harder.
 - **Whether to use a CMS overlay** — Some admins prefer Sanity Studio for content editing over a custom admin UI. We're building custom (the three-column editor) but it could be swapped to Sanity later if you'd rather edit there.
+
+---
+
+## 18. Monetization: Featured listings — **foundational addition**
+
+> ⚠️ First paid product (added 2026-10-09). Vendor-side only — consumers never pay, and nothing on the site is paywalled.
+
+- **Product:** a maker with a *verified* claim (`tool_claims`, 0031) can feature their tool for **$29/mo** (Stripe subscription, cancel anytime). One live subscription per tool.
+- **Placement:** with no keyword query, `search_tools` sorts currently-featured tools first — so they lead the homepage grid, `/tools` and their category page. Keyword search stays pure relevance. Cards carry a **"Sponsored"** label; placement is always disclosed.
+- **Flow:** `/claim/:slug` → `featured-billing` Edge Function (`action: checkout`) → Stripe Checkout → `stripe-webhook` mirrors the subscription into `featured_subscriptions` and calls `sync_tool_featured()`, which sets `tools.is_featured` / `featured_until` (period end + 3 days' grace). Managing/cancelling goes through the Stripe Billing Portal (`action: portal`).
+- **Rules:** Stripe is the source of truth; the webhook is the only writer of `featured_subscriptions` (service role; makers read their own rows via RLS). Every webhook request is signature-verified and re-fetches the subscription from Stripe, so retries and out-of-order deliveries converge. When placement flips, the webhook hits `VERCEL_DEPLOY_HOOK_URL` so prerendered pages rebuild.
+- **No Stripe SDK:** the functions call the REST API with `fetch` and verify signatures with Web Crypto (`supabase/functions/_shared/stripe.ts`).
+- **Not yet:** consumer plans, vendor analytics, affiliate links (still a non-goal).
 
 ---
 

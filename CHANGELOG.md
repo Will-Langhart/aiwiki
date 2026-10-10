@@ -5,6 +5,17 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Paid Featured listings ($29/mo, Stripe)** — SPEC §18 (migration `0040`).
+  Makers with a verified claim can feature their tool from `/claim/:slug`:
+  Stripe Checkout via the new `featured-billing` Edge Function, cancel/update
+  card via the Billing Portal. The new `stripe-webhook` function (signature
+  verified, idempotent) mirrors subscriptions into `featured_subscriptions` and
+  sets `tools.is_featured` / `featured_until`; `search_tools` now pins live
+  featured tools first when there's no keyword query, and ignores lapsed ones.
+  No Stripe SDK — plain `fetch` + Web Crypto.
+
 ### Security
 
 - **Anonymous chats are no longer public** (migration `0038`). The chat RLS

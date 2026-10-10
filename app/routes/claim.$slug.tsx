@@ -1,17 +1,27 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BadgeCheck, Check, Clock, Copy, ShieldCheck, XCircle } from "lucide-react";
-import type { Route } from "./+types/claim.$slug";
-import { supabase } from "@/lib/supabase.client";
-import { baseMeta, SITE_URL } from "@/lib/seo";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { SITE_URL, baseMeta } from "@/lib/seo";
+import { supabase } from "@/lib/supabase.client";
 import { useAuthModalStore } from "@/stores/auth-modal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Check,
+  Clock,
+  Copy,
+  ShieldCheck,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router";
+import type { Route } from "./+types/claim.$slug";
 
 export function meta({ params }: Route.MetaArgs) {
   return baseMeta({
-    title: "Claim your listing & get the badge — AI Wiki",
-    description: "Verify you make this tool and add the Featured on AI Wiki badge to your site.",
+    title: "Claim your listing & get featured — AI Wiki",
+    description:
+      "Verify you make this tool, add the Featured on AI Wiki badge to your site, and feature your listing.",
     path: `/claim/${params.slug}`,
     noindex: true,
   });
@@ -23,6 +33,8 @@ interface ClaimTool {
   name: string;
   logo_url: string | null;
   website_url: string;
+  is_featured: boolean;
+  featured_until: string | null;
 }
 
 interface Claim {
@@ -41,7 +53,7 @@ function hostOf(url: string) {
 async function fetchTool(slug: string): Promise<ClaimTool | null> {
   const { data } = await supabase
     .from("tools")
-    .select("id, slug, name, logo_url, website_url")
+    .select("id, slug, name, logo_url, website_url, is_featured, featured_until")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
@@ -56,6 +68,53 @@ async function fetchOwnClaim(toolId: string, userId: string): Promise<Claim | nu
     .eq("user_id", userId)
     .maybeSingle();
   return (data as Claim | null) ?? null;
+}
+
+/** Display price of the Featured plan; the charged amount lives in Stripe (STRIPE_FEATURED_PRICE_ID). */
+const FEATURED_PRICE = "$29/mo";
+
+interface FeaturedSubscription {
+  status: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+}
+
+const LIVE_STATUSES = ["active", "trialing", "past_due"];
+
+async function fetchOwnSubscription(
+  toolId: string,
+  userId: string,
+): Promise<FeaturedSubscription | null> {
+  const { data } = await supabase
+    .from("featured_subscriptions")
+    .select("status, current_period_end, cancel_at_period_end")
+    .eq("tool_id", toolId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as FeaturedSubscription | null) ?? null;
+}
+
+/** Calls the featured-billing Edge Function and resolves to the Stripe URL to send the maker to. */
+async function billingUrl(action: "checkout" | "portal", slug: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("featured-billing", {
+    body: { action, slug },
+  });
+  if (error) {
+    // FunctionsHttpError carries the function's JSON body on `context`.
+    const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(body?.error ?? error.message);
+  }
+  return (data as { url: string }).url;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 type BadgeTheme = "dark" | "light";
@@ -97,6 +156,122 @@ function CopyBlock({ label, code }: { label: string; code: string }) {
         {code}
       </pre>
     </div>
+  );
+}
+
+function FeaturedSection({
+  tool,
+  userId,
+  claimStatus,
+}: {
+  tool: ClaimTool;
+  userId: string | undefined;
+  claimStatus: Claim["status"] | undefined;
+}) {
+  const [searchParams] = useSearchParams();
+  const returned = searchParams.get("featured");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const verified = claimStatus === "verified";
+
+  const { data: sub } = useQuery({
+    queryKey: ["featured-own", tool.id, userId],
+    queryFn: () => fetchOwnSubscription(tool.id, userId ?? ""),
+    enabled: !!userId && verified,
+    // Right after Checkout the webhook may not have landed yet — poll briefly.
+    refetchInterval: (q) =>
+      returned === "success" && !LIVE_STATUSES.includes(q.state.data?.status ?? "") ? 3000 : false,
+  });
+  const ownLive = !!sub && LIVE_STATUSES.includes(sub.status);
+  const featuredByOther = tool.is_featured && !ownLive;
+
+  async function go(action: "checkout" | "portal") {
+    setBusy(true);
+    setError(null);
+    try {
+      window.location.assign(await billingUrl(action, tool.slug));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-base font-bold text-text">Feature {tool.name}</h2>
+          <ul className="mt-2 space-y-1.5 text-xs text-text-muted">
+            <li className="flex items-center gap-2">
+              <Sparkles size={14} className="text-accent flex-shrink-0" /> Pinned to the top of your
+              category, the directory and the homepage
+            </li>
+            <li className="flex items-center gap-2">
+              <Sparkles size={14} className="text-accent flex-shrink-0" /> Highlighted card, clearly
+              labelled &ldquo;Sponsored&rdquo;
+            </li>
+            <li className="flex items-center gap-2">
+              <Sparkles size={14} className="text-accent flex-shrink-0" /> Monthly, cancel anytime
+            </li>
+          </ul>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-xl font-bold text-text">{FEATURED_PRICE}</div>
+        </div>
+      </div>
+
+      {returned === "success" && !ownLive && (
+        <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-text">
+          <Clock size={16} className="text-accent mt-0.5 flex-shrink-0" />
+          Payment received — confirming your subscription…
+        </div>
+      )}
+      {returned === "cancelled" && !ownLive && (
+        <p className="text-xs text-text-muted">
+          Checkout cancelled — you haven&rsquo;t been charged.
+        </p>
+      )}
+
+      {ownLive && sub ? (
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-text">
+            <BadgeCheck size={16} className="text-accent mt-0.5 flex-shrink-0" />
+            <span>
+              {tool.name} is featured.{" "}
+              {sub.status === "past_due"
+                ? "Your last payment failed — update your card to keep the placement."
+                : sub.current_period_end
+                  ? `${sub.cancel_at_period_end ? "Ends" : "Renews"} on ${formatDate(sub.current_period_end)}.`
+                  : null}{" "}
+              Placement updates across the site within a few minutes.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => go("portal")}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-surface-2 disabled:opacity-60"
+          >
+            {busy ? "Opening…" : "Manage billing"}
+          </button>
+        </div>
+      ) : featuredByOther ? (
+        <p className="text-xs text-text-muted">{tool.name} is already featured.</p>
+      ) : !verified ? (
+        <p className="text-xs text-text-muted">Claim and verify the listing above to feature it.</p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => go("checkout")}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg hover:opacity-90 disabled:opacity-60"
+        >
+          <Sparkles size={14} />{" "}
+          {busy ? "Opening checkout…" : `Feature ${tool.name} — ${FEATURED_PRICE}`}
+        </button>
+      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </section>
   );
 }
 
@@ -178,7 +353,7 @@ export default function ClaimPage() {
             Is {tool.name} yours?
           </h1>
           <p className="text-sm text-text-muted mt-1">
-            Add the badge to your site, and claim the listing to get the verified mark.
+            Add the badge to your site, claim the listing to get the verified mark, and feature it.
           </p>
         </div>
       </header>
@@ -294,6 +469,8 @@ export default function ClaimPage() {
           </div>
         )}
       </section>
+
+      <FeaturedSection tool={tool} userId={user?.id} claimStatus={claim?.status} />
     </div>
   );
 }
