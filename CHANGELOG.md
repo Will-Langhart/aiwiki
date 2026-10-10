@@ -5,6 +5,17 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Security
+
+- **Anonymous chats are no longer public** (migration `0038`). The chat RLS
+  policies granted ALL when `user_id IS NULL`, so anyone with the public anon
+  key could read, edit or delete every anonymous conversation (147 messages /
+  73 sessions). Now owners read their own sessions, admins read all, and
+  nothing else — writes were already service-role only via the chat function.
+- **Chat function checks session ownership.** A client-supplied `session_id`
+  is only used when it belongs to the caller; otherwise a fresh session
+  starts, so one visitor can't load another's history into their context.
+
 ### Added
 
 - **Answer engine** (migration `0039`, answer-pages-spec §D.1/§D.4 amended).
