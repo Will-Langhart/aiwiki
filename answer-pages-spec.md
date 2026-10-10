@@ -191,6 +191,16 @@ Two entry points, one destination (the `/admin/answers/:id` editor):
   row: `question` from the preceding user message, `answer_md` from the assistant
   content, `tool_ids` from its `tool_citations`, `source_message_id` set.
 - **Author from scratch.** "New answer" opens an empty draft.
+- **Draft from demand** *(amended 2026-10-09, migration `0039`)*. The admin
+  answers list shows **"Questions people ask"**: user chat messages from the
+  last 90 days grouped by a normalized key (`app/lib/answer-demand.ts`),
+  most-asked first, hiding questions an existing answer already covers. "Draft
+  answer" (or a free-text question) calls the admin-only `draft-answer` Edge
+  Function: hybrid retrieval → Claude writes the page **only from the retrieved
+  tools' directory facts** (structured output) → the deterministic check in
+  §D.4 → a `public_answers` row with `status = 'draft'`. It never publishes;
+  the admin edits and publishes as usual. Cost logged as `answer_draft`, capped
+  at $2/day.
 
 ### D.2 The editor
 
@@ -220,10 +230,13 @@ habit (not auto-enforced beyond the field checks above):
 - Each page answers one distinct user job with substantive, unique prose — no
   near-duplicate permutations, no empty combinations (mirrors `prelaunch-plan.md`
   P1.2's indexing thresholds).
-- **Optional future gate:** an LLM consistency check (does `answer_md` only make
-  claims supported by the cited tools' verified facts?) before publish, logged to
-  `llm_usage` under a new `answer_consistency` feature. Out of scope for v1;
-  noted so the check-constraint migration is anticipated.
+- **Consistency check for AI drafts** *(amended 2026-10-09)*: deterministic, no
+  LLM (`supabase/functions/draft-answer/check.ts`). Flags `[tool:slug]`
+  references that aren't published tools, `$` amounts no referenced tool's
+  pricing data contains, cited tools the prose never mentions, fewer than 3
+  tools, and answers under 600 characters. Flags are stored in
+  `public_answers.review_flags` and shown in the editor until publish. An LLM
+  claim-level check remains a possible future gate.
 
 ---
 

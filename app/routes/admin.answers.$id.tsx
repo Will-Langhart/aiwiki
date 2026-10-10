@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Components } from "react-markdown";
-import { X, Plus, ExternalLink, ArrowLeft, Loader2 } from "lucide-react";
+import { X, Plus, ExternalLink, ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase.client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
@@ -48,7 +48,7 @@ const EMPTY: AnswerForm = {
 async function fetchAnswer(id: string) {
   const { data } = await supabase
     .from("public_answers")
-    .select("id, question, slug, summary, answer_md, tool_ids, category_id, status")
+    .select("id, question, slug, summary, answer_md, tool_ids, category_id, status, review_flags")
     .eq("id", id)
     .maybeSingle();
   return data;
@@ -298,6 +298,21 @@ export default function AdminAnswerEditor() {
           )}
         </div>
       </div>
+
+      {/* AI-draft consistency flags (draft-answer → checkDraft). Shown until the
+          answer is published; the editor resolves them by hand. */}
+      {form.status !== "published" && Array.isArray(loaded?.review_flags) && loaded.review_flags.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 text-sm">
+          <p className="font-medium text-amber-600 flex items-center gap-1.5">
+            <AlertTriangle size={14} /> Check before publishing — the AI draft didn't pass these checks
+          </p>
+          <ul className="mt-1.5 space-y-1 text-text-muted list-disc pl-5">
+            {(loaded.review_flags as Array<{ kind: string; detail: string }>).map((f) => (
+              <li key={`${f.kind}:${f.detail}`}>{f.detail}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {msg && (
         <div className={`text-sm rounded-lg px-3 py-2 border ${msg.kind === "ok" ? "text-emerald-600 border-emerald-500/30 bg-emerald-500/5" : "text-danger border-danger/30 bg-danger/5"}`}>
