@@ -5,6 +5,18 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Answer engine** (migration `0039`, answer-pages-spec §D.1/§D.4 amended).
+  `/admin/answers` now lists **Questions people ask** — real chat questions
+  from the last 90 days, grouped and counted, hiding ones already answered —
+  with a **Draft answer** button (or any free-text question). The admin-only
+  `draft-answer` Edge Function retrieves matching tools, has Claude write the
+  page from only their directory facts, and runs a deterministic consistency
+  check (unknown tools, unsupported prices, thin pages) whose flags show in the
+  editor. Drafts are never published automatically. ~$0.05–0.10 per draft,
+  capped at $2/day (`answer_draft`). Needs migration `0038` for admin chat reads.
+
 ### Fixed
 
 - **Bot-walled tools refresh again.** Cloudflare's JS challenge 403'd every

@@ -640,6 +640,7 @@ export type Database = {
           id: string
           published_at: string | null
           question: string
+          review_flags: Json
           slug: string
           source_message_id: string | null
           status: string
@@ -656,6 +657,7 @@ export type Database = {
           id?: string
           published_at?: string | null
           question: string
+          review_flags?: Json
           slug: string
           source_message_id?: string | null
           status?: string
@@ -672,6 +674,7 @@ export type Database = {
           id?: string
           published_at?: string | null
           question?: string
+          review_flags?: Json
           slug?: string
           source_message_id?: string | null
           status?: string
