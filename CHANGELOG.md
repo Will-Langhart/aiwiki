@@ -16,6 +16,14 @@ All notable changes to AI Wiki are documented here. Format loosely follows
   featured tools first when there's no keyword query, and ignores lapsed ones.
   No Stripe SDK — plain `fetch` + Web Crypto.
 
+### Changed
+
+- **Chat now requires sign-in.** The `chat` Edge Function returns 401 for
+  requests without a signed-in user, and the anonymous per-IP quota path is
+  removed (the `bump_anon_chat_usage` RPC is now unused). On `/chat`, sending
+  while signed out opens the sign-in modal; the prompt is carried through the
+  auth redirect as `?q=` and auto-sends once the user lands back signed in.
+
 ### Security
 
 - **Anonymous chats are no longer public** (migration `0038`). The chat RLS

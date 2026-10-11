@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { Components } from "react-markdown";
 import { Send, RotateCcw, ArrowDown, Square, Copy, Check, RefreshCw, Search } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuthModalStore } from "@/stores/auth-modal";
 import { supabase } from "@/lib/supabase.client";
 import { MarkdownRenderer } from "@/components/tool/MarkdownRenderer";
 import { ToolCitationCard } from "@/components/chat/ToolCitationCard";
@@ -10,7 +11,6 @@ import { trackEvent, resolveChannel, type ChatSource } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface CitedTool {
   id: string;
@@ -232,7 +232,8 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ sessionId: initialSessionId, onSessionChange, initialPrompt, initialSource = "deep_link" }: ChatInterfaceProps) {
-  const { user } = useCurrentUser();
+  const { user, loading: authLoading } = useCurrentUser();
+  const openAuthModal = useAuthModalStore((s) => s.openModal);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
@@ -351,6 +352,14 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
   const sendMessage = async (text: string, source: ChatSource = "composer") => {
     if (!text.trim() || sending) return;
 
+    // Chat is sign-in only. Sign-in is a redirect (magic link / OAuth), so carry
+    // the prompt through ?q= — the deep-link effect below sends it on return.
+    if (!user) {
+      const params = new URLSearchParams({ q: text.trim(), src: source });
+      openAuthModal(`/chat?${params.toString()}`);
+      return;
+    }
+
     // Funnel events — counts/enums only, never the message text (privacy).
     const priorUserMessages = messages.filter((m) => m.role === "user").length;
     if (priorUserMessages === 0) {
@@ -371,9 +380,7 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token
-        ? `Bearer ${session.access_token}`
-        : `Bearer ${ANON_KEY}`;
+      const authHeader = `Bearer ${session?.access_token ?? ""}`;
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
         method: "POST",
@@ -491,12 +498,13 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
   // biome-ignore lint/correctness/useExhaustiveDependencies: fires once via ref guard
   useEffect(() => {
     if (initialPromptSent.current) return;
+    if (authLoading) return; // wait to know whether to send or prompt sign-in
     if (sessionIdAtMount.current) return; // never inject into a historical session
     const prompt = initialPrompt?.trim();
     if (!prompt) return;
     initialPromptSent.current = true;
     sendMessage(prompt, initialSource);
-  }, [initialPrompt]);
+  }, [initialPrompt, authLoading]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -595,9 +603,16 @@ export function ChatInterface({ sessionId: initialSessionId, onSessionChange, in
 
       {/* Input area */}
       <div className="px-4 pb-5 pt-2">
-        {!user && (
+        {!authLoading && !user && (
           <p className="text-xs text-text-subtle text-center mb-2">
-            Sign in to save history · Anonymous sessions limited to 5 messages/day
+            <button
+              type="button"
+              onClick={() => openAuthModal("/chat")}
+              className="text-accent hover:underline"
+            >
+              Sign in or create an account
+            </button>{" "}
+            to chat with AI Wiki
           </p>
         )}
         <div className="max-w-2xl mx-auto">

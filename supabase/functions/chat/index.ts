@@ -22,19 +22,8 @@ const OUTPUT_COST_PER_M = 15;
 // Agent loop bound — caps tool round-trips so a confused turn can't run away.
 const MAX_AGENT_ITERATIONS = 3;
 
-// Rate limits
+// Rate limits — chat requires sign-in, so only the per-user cap applies.
 const AUTHED_LIMIT = 50;
-const ANON_LIMIT = 5;
-
-// Salted SHA-256 of the client IP — we rate-limit anonymous traffic by IP but
-// never store the raw address. Salt is optional; a constant default is fine
-// since the hash only ever needs to be stable within a single day's counting.
-async function hashIp(ip: string): Promise<string> {
-  const salt = Deno.env.get("ANON_IP_SALT") ?? "aiwiki-anon-chat";
-  const bytes = new TextEncoder().encode(`${salt}:${ip}`);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 async function embedQuery(text: string, trace: Trace, parent: Span): Promise<number[]> {
   const span = trace.start(`embeddings ${EMBEDDING_MODEL}`, {
@@ -197,13 +186,6 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
 
-    // Client IP for anonymous rate limiting. Behind Supabase's proxy the real
-    // client is the first hop in x-forwarded-for; fall back to cf-connecting-ip.
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
-
     // Use service role for admin DB ops; anon key for user-scoped checks
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -221,6 +203,14 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
+    // Chat is sign-in only. The anon key is a valid JWT, so a request carrying
+    // it still resolves to no user here and is rejected.
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Sign in to chat with AI Wiki." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { session_id, message } = await req.json() as { session_id?: string; message: string };
     if (!message?.trim()) {
       return new Response(JSON.stringify({ error: "message is required" }), {
@@ -231,39 +221,21 @@ Deno.serve(async (req) => {
     // Rate limit check
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().slice(0, 10);
-    if (userId) {
-      const { count } = await supabaseAdmin
-        .from("chat_messages")
-        .select("*", { count: "exact", head: true })
-        .eq("role", "user")
+    const { count } = await supabaseAdmin
+      .from("chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "user")
+      .gte("created_at", today.toISOString())
+      .in("session_id", (await supabaseAdmin
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", userId)
         .gte("created_at", today.toISOString())
-        .in("session_id", (await supabaseAdmin
-          .from("chat_sessions")
-          .select("id")
-          .eq("user_id", userId)
-          .gte("created_at", today.toISOString())
-        ).data?.map((s: { id: string }) => s.id) ?? []);
-      if ((count ?? 0) >= AUTHED_LIMIT) {
-        return new Response(JSON.stringify({ error: `Daily limit of ${AUTHED_LIMIT} messages reached.` }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      // Anonymous: enforce a per-IP daily cap so one client can't drain the
-      // shared budget. bump_anon_chat_usage increments and returns the new
-      // count atomically. If it errors (e.g. migration not yet applied), fail
-      // open — the global cost cap below still bounds total spend.
-      const ipHash = await hashIp(clientIp);
-      const { data: anonCount, error: anonErr } = await supabaseAdmin.rpc(
-        "bump_anon_chat_usage",
-        { p_ip_hash: ipHash },
-      );
-      if (!anonErr && typeof anonCount === "number" && anonCount > ANON_LIMIT) {
-        return new Response(
-          JSON.stringify({ error: `Daily limit of ${ANON_LIMIT} messages reached. Sign in for more.` }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      ).data?.map((s: { id: string }) => s.id) ?? []);
+    if ((count ?? 0) >= AUTHED_LIMIT) {
+      return new Response(JSON.stringify({ error: `Daily limit of ${AUTHED_LIMIT} messages reached.` }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Daily cost cap — sum the whole turn's spend (one row per LLM round-trip)
@@ -280,9 +252,8 @@ Deno.serve(async (req) => {
     }
 
     // Get or create session. A client-supplied session_id is only honoured if it
-    // belongs to this caller (same signed-in user, or anonymous → anonymous);
-    // otherwise its history would be loaded into this caller's context. A
-    // mismatch starts a fresh session instead of failing the message.
+    // belongs to this caller; otherwise its history would be loaded into this
+    // caller's context. A mismatch starts a fresh session instead of failing.
     let sessionId = session_id;
     if (sessionId) {
       const { data: existing } = await supabaseAdmin
@@ -318,14 +289,13 @@ Deno.serve(async (req) => {
 
     const conversationHistory = (history ?? []).reverse() as Array<{ role: string; content: string }>;
 
-    // One trace per turn, grouped into a thread by chat session. user_id is set
-    // only for signed-in users — anonymous traffic is never tied to an IP.
+    // One trace per turn, grouped into a thread by chat session and user.
     const trace = new Trace(LANGEVAL);
     const root = trace.start("chat", {
       "openinference.span.kind": "AGENT",
       "gen_ai.agent.name": "aiwiki-chat",
       "langeval.thread_id": sessionId,
-      "langeval.user_id": userId ?? undefined,
+      "langeval.user_id": userId,
     }).content("input", message);
 
     // --- Agentic retrieval tools (executed server-side) ---
