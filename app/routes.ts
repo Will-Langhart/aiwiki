@@ -25,6 +25,7 @@ export default [
     // Account (auth-gated)
     layout("routes/account.tsx", [
       route("account", "routes/account._index.tsx"),
+      route("account/stack", "routes/account.stack.tsx"),
       route("account/bookmarks", "routes/account.bookmarks.tsx"),
       route("account/drafts", "routes/account.drafts.tsx"),
       route("account/notifications", "routes/account.notifications.tsx"),

@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router";
-import { User, Bookmark, FileEdit, Bell, Settings, Lock } from "lucide-react";
+import { User, Bookmark, Layers, FileEdit, Bell, Settings, Lock } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuthModalStore } from "@/stores/auth-modal";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { to: "/account",                  label: "Profile",         icon: User },
+  { to: "/account/stack",            label: "My AI stack",     icon: Layers },
   { to: "/account/bookmarks",        label: "Bookmarks",       icon: Bookmark },
   { to: "/account/drafts",           label: "My submissions",  icon: FileEdit },
   { to: "/account/notifications",    label: "Notifications",   icon: Bell },
