@@ -2,7 +2,7 @@
 
 > **Status:** v1 spec, ready for implementation  
 > **Owner:** Lang  
-> **Last updated:** May 22, 2026  
+> **Last updated:** Oct 13, 2026 (§19 AI stack tracker)  
 > **Stack:** React Router v7 (framework mode) · TypeScript · Vite · Tailwind · shadcn/ui · Supabase · Vercel
 
 ---
@@ -17,6 +17,7 @@
 3. **Compare** — "Claude vs. ChatGPT for code generation — which is better and why?"
 4. **Contribute** — "Add the AI tool I love so others can find it."
 5. **Save** — "Keep a personal list of tools I want to try or use regularly."
+6. **Track** — "What am I paying for AI, where do my tools overlap, and tell me when one of them changes." (§19, added 2026-10)
 
 ### Success metrics (12-month targets)
 - 250+ published tool pages
@@ -32,6 +33,7 @@
 - No private workspaces (this is a public wiki)
 - No multi-language support in v1
 - No comments at launch (ship in v1.1 — schema-ready but UI deferred)
+- No native mobile app yet — gated on the stack tracker proving retention on the web (§19.6)
 
 ---
 
@@ -659,6 +661,7 @@ Every route is enumerated below with its rendering strategy and purpose. Prerend
 | `/account/bookmarks` | SPA (auth) | RootLayout | Saved tools |
 | `/account/drafts` | SPA (auth) | RootLayout | My submissions |
 | `/account/notifications` | SPA (auth) | RootLayout | Notification list |
+| `/account/stack` | SPA (auth) | RootLayout | My AI stack — tools I pay for, monthly total, overlaps, cheaper alternatives (§19). Added 2026-10. |
 | `/admin` | SPA (admin) | AdminLayout | Admin home with queues |
 | `/admin/submissions` | SPA (admin) | AdminLayout | Submission queue |
 | `/admin/submissions/:id` | SPA (admin) | AdminLayout | Three-column editor |
@@ -1054,6 +1057,7 @@ Rate limit: 10 calls / user / day at RLS-equivalent level (table `llm_usage` cou
 | Admin rejects draft | Submitter | `submission_rejected` | email + in-app |
 | Tool actually publishes | Submitter | `tool_published` | email + in-app |
 | Someone rates a tool you submitted | Submitter | `rating_received` | in-app only (default) |
+| Freshness engine records a notable change to a tool (§10.6.1) | Bookmarkers ∪ stack members (`tool_watchers()`, §19) | `tool_updated` | email + in-app |
 | Reply to your comment (v1.1) | Parent author | `comment_replied` | email + in-app |
 
 ### 9.2 In-app delivery
@@ -1670,6 +1674,57 @@ These are decisions intentionally deferred to be made when the work is in front 
 - **Rules:** Stripe is the source of truth; the webhook is the only writer of `featured_subscriptions` (service role; makers read their own rows via RLS). Every webhook request is signature-verified and re-fetches the subscription from Stripe, so retries and out-of-order deliveries converge. When placement flips, the webhook hits `VERCEL_DEPLOY_HOOK_URL` so prerendered pages rebuild.
 - **No Stripe SDK:** the functions call the REST API with `fetch` and verify signatures with Web Crypto (`supabase/functions/_shared/stripe.ts`).
 - **Not yet:** consumer plans, vendor analytics, affiliate links (still a non-goal).
+
+---
+
+## 19. AI stack tracker — **foundational addition**
+
+> ⚠️ Added 2026-10-13. Adds a sixth user job (**Track**) and the first private, per-user financial-ish data on the site. Read §19.4 before touching it.
+
+**Why:** paying users average ~4 AI subscriptions (~$66/mo) and most find AI pricing confusing. Directories are visited once; a stack gives a reason to come back, and it is the thing the freshness engine (§10.6.1) can alert on. It is also the validation step for any mobile app (§19.6).
+
+### 19.1 Product
+
+- **Add to stack** from any tool page / card (next to Bookmark): plan label, cost, monthly or yearly, status (active / trial / cancelled), optional renewal date and note. Signed-in only.
+- **`/account/stack`** shows:
+  - Monthly total (active + trial; yearly plans ÷ 12), and annual run-rate.
+  - **Overlaps** — 2+ active items in the same primary category ("ChatGPT Plus and Claude Pro are both General assistants — $38/mo").
+  - **Cheaper alternatives** per item via the existing `tool_alternatives` RPC, filtered to ones with a free tier or a lower `pricing_starts_at`.
+  - **Listed price vs. what you pay** — current `pricing_tier` / `pricing_starts_at` / `last_verified_at` beside the user's cost; recent notable `tool_changes` for each item.
+  - **No longer listed** — items whose tool is archived (defunct or merged) are flagged with a link to alternatives.
+- **Alerts:** stack members get the same `tool_updated` alert as bookmarkers (§9.1). No new notification type; the payload may add `inStack: true` so the email can say "a tool you pay for".
+- Bookmarks are unchanged: bookmark = interested, stack = paying.
+
+### 19.2 Data (migration `0041`)
+
+- `stack_items (user_id, tool_id)` PK — `plan_label`, `cost_usd`, `billing_period` (`month`|`year`), generated `monthly_cost`, `status` (`active`|`trial`|`cancelled`), `renews_on`, `notes`, timestamps. USD only in v1.
+- `my_stack()` — security invoker; the caller's rows joined with current tool facts, `overlap_group` and `is_listed`. Powers `/account/stack`.
+- `tool_watchers(tool_id)` — security definer, **service role only**; bookmarkers ∪ non-cancelled stack members. `services/enrichment/enrichment/refresh.py` `notify_watchers()` switches from the bookmarks query to this RPC.
+
+### 19.3 Rendering & stack
+
+- `/account/stack` is SPA (auth), TanStack Query over `my_stack()`; mutations are direct table writes under RLS (no Edge Function). Forms via RHF + Zod. No new dependencies.
+- The tool-page "Add to stack" control is client-only (the page stays prerendered).
+
+### 19.4 Privacy rules (binding)
+
+- RLS is **owner-only** on `stack_items`. There is deliberately **no admin read policy**.
+- No stack data in analytics events, URLs, logs or LLM prompts. Chat may only use the stack if the user explicitly opts in per conversation (not in v1).
+- Any vendor-facing or public use is **aggregate-only** through a dedicated function with a minimum count (k ≥ 10 users per tool per stat) and requires its own spec change.
+- Account deletion cascades (`on delete cascade` from `profiles`).
+
+### 19.5 Success criteria (decide on mobile at +60 days)
+
+- ≥ 25% of signed-in users who add one item add a second.
+- ≥ 30% of stack users return within 30 days (alert click-through counts).
+- Alert email click-through ≥ 10%.
+
+### 19.6 Not yet
+
+- **iOS app** (Expo, shares Zod schemas / generated types; widgets, share-sheet lookup, push for `tool_updated`, App Intents). Only if §19.5 is met — then it gets its own spec section, a `push_tokens` table and Sign in with Apple.
+- Vendor aggregates ("N AI Wiki users pay for your tool; top tools they also pay for") — would extend §18; needs the k-threshold function above.
+- Importing subscriptions (email receipts, App Store) — no.
+- Renewal reminders — easy follow-up once `renews_on` has data.
 
 ---
 

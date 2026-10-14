@@ -310,29 +310,46 @@ def _describe(col: str, change: dict) -> str:
 
 
 def notify_watchers(tool_id: str, fields: dict) -> int:
-    """One 'tool_updated' notification per bookmarker when a notable field changed.
+    """One 'tool_updated' notification per watcher when a notable field changed.
 
-    The on_notification_created trigger emails each one (unless they opted out
-    in notification_preferences). Returns how many notifications were created.
+    Watchers are bookmarkers plus anyone with the tool in their AI stack
+    (tool_watchers RPC, migration 0041; SPEC §19). The on_notification_created
+    trigger emails each one (unless they opted out in notification_preferences).
+    Returns how many notifications were created.
     """
     notable = [col for col in NOTABLE_FIELDS if col in fields]
     if not notable:
         return 0
     sb = get_supabase()
-    watchers = sb.table("bookmarks").select("user_id").eq("tool_id", tool_id).execute().data or []
+    watchers = sb.rpc("tool_watchers", {"p_tool_id": tool_id}).execute().data or []
     if not watchers:
         return 0
     tool = sb.table("tools").select("name,slug").eq("id", tool_id).single().execute().data or {}
+    name = tool.get("name")
     summary = "; ".join(_describe(col, fields[col]) for col in notable)
-    payload = {
-        "title": f"{tool.get('name', 'A tool you watch')} was updated",
+    base = {
         "body": summary,
-        "toolName": tool.get("name"),
+        "toolName": name,
         "toolSlug": tool.get("slug"),
         "link": f"/tools/{tool.get('slug')}",
         "fields": notable,
     }
-    rows = [{"user_id": w["user_id"], "type": "tool_updated", "payload": payload} for w in watchers]
+    rows = [
+        {
+            "user_id": w["user_id"],
+            "type": "tool_updated",
+            "payload": {
+                **base,
+                "title": (
+                    f"{name or 'A tool you pay for'} changed (it's in your AI stack)"
+                    if w.get("in_stack")
+                    else f"{name or 'A tool you watch'} was updated"
+                ),
+                "inStack": bool(w.get("in_stack")),
+            },
+        }
+        for w in watchers
+    ]
     sb.table("notifications").insert(rows).execute()
     return len(rows)
 

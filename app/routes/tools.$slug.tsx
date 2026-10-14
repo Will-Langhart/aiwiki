@@ -10,6 +10,7 @@ import { ToolHeader } from "@/components/tool/ToolHeader";
 import { ToolHero } from "@/components/tool/ToolHero";
 import { AudienceToggle } from "@/components/tool/AudienceToggle";
 import { BookmarkButton } from "@/components/tool/BookmarkButton";
+import { StackButton } from "@/components/tool/StackButton";
 import { RatingDisplay } from "@/components/tool/RatingDisplay";
 import { RatingInput } from "@/components/tool/RatingInput";
 import { ReviewsList } from "@/components/tool/ReviewsList";
@@ -18,6 +19,7 @@ import { ToolFreshness } from "@/components/tool/ToolFreshness";
 import { ToolNextSteps, type AlternativeTool } from "@/components/tool/ToolNextSteps";
 import { fetchToolAlternatives } from "@/lib/alternatives";
 import { fetchToolChanges, type ToolChange } from "@/lib/tool-changes";
+import { fetchStackEntry, type StackEntry } from "@/lib/stack";
 import { useAuthModalStore } from "@/stores/auth-modal";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
@@ -98,6 +100,8 @@ export interface ToolPublicData {
 interface UserToolData {
   isBookmarked: boolean;
   userRating: UserRating | null;
+  /** The user's AI-stack row for this tool (§19), if any. */
+  stackEntry: StackEntry | null;
 }
 
 // ── Data loading ────────────────────────────────────────────────────────────
@@ -171,9 +175,9 @@ async function fetchToolPublicData(
   };
 }
 
-/** User-specific data (bookmark + own rating) — client-only, never prerendered. */
+/** User-specific data (bookmark, own rating, stack row) — client-only, never prerendered. */
 async function fetchUserToolData(toolId: string, userId: string): Promise<UserToolData> {
-  const [{ data: bookmark }, { data: userRating }] = await Promise.all([
+  const [{ data: bookmark }, { data: userRating }, stackEntry] = await Promise.all([
     supabase
       .from("bookmarks")
       .select("tool_id")
@@ -186,10 +190,12 @@ async function fetchUserToolData(toolId: string, userId: string): Promise<UserTo
       .eq("tool_id", toolId)
       .eq("user_id", userId)
       .maybeSingle(),
+    fetchStackEntry(toolId, userId),
   ]);
   return {
     isBookmarked: !!bookmark,
     userRating: (userRating as UserRating | null) ?? null,
+    stackEntry,
   };
 }
 
@@ -384,14 +390,25 @@ export default function ToolLayout() {
         tool={tool}
         verified={isClaimed}
         bookmarkButton={
-          <BookmarkButton
-            toolId={tool.id}
-            toolSlug={tool.slug}
-            userId={user?.id}
-            isBookmarked={isBookmarked}
-            queryKey={queryKey}
-            onAuthRequired={() => signInHere(true)}
-          />
+          <>
+            <StackButton
+              toolId={tool.id}
+              toolName={tool.name}
+              userId={user?.id}
+              entry={userData?.stackEntry ?? null}
+              listedPrice={tool.pricing_starts_at}
+              queryKey={queryKey}
+              onAuthRequired={() => signInHere()}
+            />
+            <BookmarkButton
+              toolId={tool.id}
+              toolSlug={tool.slug}
+              userId={user?.id}
+              isBookmarked={isBookmarked}
+              queryKey={queryKey}
+              onAuthRequired={() => signInHere(true)}
+            />
+          </>
         }
       />
 

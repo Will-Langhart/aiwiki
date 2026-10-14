@@ -7,6 +7,16 @@ All notable changes to AI Wiki are documented here. Format loosely follows
 
 ### Added
 
+- **AI stack tracker** — SPEC §19 (migration `0041`, already applied).
+  "Add to my AI stack" button in the tool header (plan, cost, monthly/yearly,
+  status, renewal, note) and a new `/account/stack` page: monthly and annual
+  totals, same-category overlaps, listed-vs-paid price, recent notable changes,
+  cheaper alternatives, and a "no longer listed" flag for archived tools.
+  `stack_items` has owner-only RLS (no admin read); `my_stack()` serves the
+  page. Freshness alerts now go to bookmarkers ∪ stack members via
+  `tool_watchers()` (`refresh.py`), and the `tool_updated` email says when the
+  tool is in your stack. New count-only analytics events: `stack_add_click`,
+  `stack_item_saved`, `stack_item_removed`, `stack_view`.
 - **Paid Featured listings ($29/mo, Stripe)** — SPEC §18 (migration `0040`).
   Makers with a verified claim can feature their tool from `/claim/:slug`:
   Stripe Checkout via the new `featured-billing` Edge Function, cancel/update

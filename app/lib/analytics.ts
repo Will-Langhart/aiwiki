@@ -86,6 +86,19 @@ type EventMap = {
   answer_tool_click: { signed_in: boolean; source: "card" | "inline" };
   /** Click the "Ask a follow-up" CTA from an answer page into /chat. */
   answer_followup_click: { signed_in: boolean };
+  /**
+   * AI stack (SPEC §19). Privacy rule §19.4: never the tool, plan or cost —
+   * only enums and counts.
+   */
+  stack_add_click: { signed_in: boolean; already_in_stack: boolean };
+  stack_item_saved: {
+    is_new: boolean;
+    status: "active" | "trial" | "cancelled";
+    billing_period: "month" | "year";
+  };
+  stack_item_removed: Record<string, never>;
+  /** /account/stack became viewable with data loaded. */
+  stack_view: { stack_size: number; has_overlap: boolean };
 };
 
 // Vercel's track() accepts these primitive property values.

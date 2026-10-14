@@ -809,6 +809,63 @@ export type Database = {
           },
         ]
       }
+      stack_items: {
+        Row: {
+          billing_period: string
+          cost_usd: number
+          created_at: string
+          monthly_cost: number | null
+          notes: string | null
+          plan_label: string | null
+          renews_on: string | null
+          status: string
+          tool_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_period?: string
+          cost_usd?: number
+          created_at?: string
+          monthly_cost?: number | null
+          notes?: string | null
+          plan_label?: string | null
+          renews_on?: string | null
+          status?: string
+          tool_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_period?: string
+          cost_usd?: number
+          created_at?: string
+          monthly_cost?: number | null
+          notes?: string | null
+          plan_label?: string | null
+          renews_on?: string | null
+          status?: string
+          tool_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stack_items_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stack_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_events: {
         Row: {
           id: string
@@ -940,6 +997,7 @@ export type Database = {
           evidence?: string | null
           field: string
           id?: string
+          is_notable?: boolean | null
           job_id?: string | null
           new_value?: Json | null
           old_value?: Json | null
@@ -950,6 +1008,7 @@ export type Database = {
           evidence?: string | null
           field?: string
           id?: string
+          is_notable?: boolean | null
           job_id?: string | null
           new_value?: Json | null
           old_value?: Json | null
@@ -1479,6 +1538,30 @@ export type Database = {
           tagline: string
         }[]
       }
+      my_stack: {
+        Args: never
+        Returns: {
+          added_at: string
+          billing_period: string
+          category_name: string
+          cost_usd: number
+          has_free_tier: boolean
+          is_listed: boolean
+          last_verified_at: string
+          logo_url: string
+          monthly_cost: number
+          name: string
+          notes: string
+          overlap_group: string
+          plan_label: string
+          pricing_starts_at: number
+          pricing_tier: string
+          renews_on: string
+          slug: string
+          status: string
+          tool_id: string
+        }[]
+      }
       search_tools: {
         Args: {
           audiences?: string[]
@@ -1518,7 +1601,51 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      strip_placeholder_tokens: { Args: { vals: string[] }; Returns: string[] }
       sync_tool_featured: { Args: { p_tool_id: string }; Returns: boolean }
+      tool_alternative_pairs: {
+        Args: { p_per_tool?: number }
+        Returns: {
+          alt_slugs: string[]
+          slug: string
+        }[]
+      }
+      tool_alternatives: {
+        Args: { p_limit?: number; p_slug: string }
+        Returns: {
+          api_available: boolean
+          audience_fit: string
+          avg_stars: number
+          category_name: string
+          category_slug: string
+          github_stars: number
+          has_free_tier: boolean
+          id: string
+          integrations: string[]
+          is_featured: boolean
+          logo_url: string
+          model_provider: string
+          name: string
+          open_source: boolean
+          pricing_detail: string
+          pricing_starts_at: number
+          pricing_tier: string
+          primary_category_id: string
+          rating_count: number
+          score: number
+          self_hostable: boolean
+          slug: string
+          tagline: string
+          traffic_tier: string
+        }[]
+      }
+      tool_watchers: {
+        Args: { p_tool_id: string }
+        Returns: {
+          in_stack: boolean
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

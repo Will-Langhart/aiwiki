@@ -51,14 +51,19 @@ function renderEmail(type: string, payload: Record<string, string>, recipientNam
          <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa">${payload.body ?? "Your tool has been published to the AI Wiki directory."}</p>
          ${payload.link ? `<a href="${SITE_URL}${payload.link}" style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">View the page →</a>` : ""}`,
       );
-    case "tool_updated":
+    case "tool_updated": {
+      // inStack: the recipient pays for this tool (stack_items, SPEC §19), not just watches it.
+      const inStack = Boolean(payload.inStack);
+      const name = payload.toolName ?? (inStack ? "A tool you pay for" : "A tool you watch");
       return base(
-        `🔔 ${payload.toolName ?? "A tool you watch"} changed on AI Wiki`,
-        `<p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#fafafa">${payload.toolName ?? "A tool you watch"} was updated</p>
+        inStack ? `💳 ${name} changed (it's in your AI stack)` : `🔔 ${name} changed on AI Wiki`,
+        `<p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#fafafa">${name} was updated</p>
          <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa">${payload.body ?? "Pricing or features changed on a tool you're watching."}</p>
          ${payload.link ? `<a href="${SITE_URL}${payload.link}" style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">See what changed →</a>` : ""}
-         <p style="margin:24px 0 0;font-size:12px;color:#71717a">You're getting this because you watch this tool. Manage alerts in <a href="${SITE_URL}/account/preferences" style="color:#71717a">your preferences</a>.</p>`,
+         ${inStack ? `<p style="margin:16px 0 0;font-size:14px"><a href="${SITE_URL}/account/stack" style="color:#60a5fa">Review your AI stack →</a></p>` : ""}
+         <p style="margin:24px 0 0;font-size:12px;color:#71717a">You're getting this because ${inStack ? "this tool is in your AI stack" : "you watch this tool"}. Manage alerts in <a href="${SITE_URL}/account/preferences" style="color:#71717a">your preferences</a>.</p>`,
       );
+    }
     case "submission_received":
       return base(
         "New tool submission received",
